@@ -1,1 +1,6 @@
-/.idea/
+target/
+*.class
+.idea/
+*.iml
+.vscode/
+*.log
