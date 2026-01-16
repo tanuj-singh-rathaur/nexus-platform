@@ -1,91 +1,35 @@
 package com.rathaur.nexus.portfolioservice.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
 import java.util.List;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-
-
+@Data
 @Entity
-public class Project {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private Long id;
+@Table(name = "projects") // Explicit table name
+@EqualsAndHashCode(callSuper = true)
+public class Project extends BaseEntity {
 
     private String title;
 
-    @Column(length = 1000)
+    @Column(length = 2000)
     private String description;
 
     private String githubUrl;
     private String liveDemoUrl;
+    private String imageUrl; // For a screenshot
 
-    private List<String> techstack;
+    private boolean isFeatured; // "Top 3 Projects" flag
+    private int displayOrder;   // To sort them manually
 
-    private String userId;
+    @ElementCollection
+    private List<String> techStack;
 
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getGithubUrl() {
-        return githubUrl;
-    }
-
-    public void setGithubUrl(String githubUrl) {
-        this.githubUrl = githubUrl;
-    }
-
-    public String getLiveDemoUrl() {
-        return liveDemoUrl;
-    }
-
-    public void setLiveDemoUrl(String liveDemoUrl) {
-        this.liveDemoUrl = liveDemoUrl;
-    }
-
-    public List<String> getTechstack() {
-        return techstack;
-    }
-
-    public void setTechstack(List<String> techstack) {
-        this.techstack = techstack;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public void setUserId(String userId) {
-        this.userId = userId;
-    }
-    
-
-
-    
+    @ManyToOne
+    @JoinColumn(name = "profile_id")
+    @JsonIgnore
+    private Profile profile;
 }
