@@ -13,10 +13,10 @@
     <modules>
         <module>service-registry</module>
         <module>api-gateway</module>
-        <module>auth-service</module>
+        <module>identity-service</module>
         <module>portfolio-service</module>
         <module>stats-collector</module>
-        <module>common-library</module>
+        <module>nexus-common</module>
     </modules>
 
     <properties>

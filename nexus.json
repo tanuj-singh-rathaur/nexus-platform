@@ -1,0 +1,292 @@
+{
+	"info": {
+		"_postman_id": "nexus-platform-final",
+		"name": "Nexus Platform (Production Ready)",
+		"description": "Complete collection matching the final verified Spring Boot Controllers.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Identity Service",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Rathaur\",\n    \"email\": \"rathaur@example.com\",\n    \"password\": \"password123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/auth/register",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8080",
+							"path": ["auth", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login (Get Token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Auto-save token to environment variable 'jwt_token'",
+									"if (pm.response.code === 200) {",
+									"    pm.environment.set(\"jwt_token\", pm.response.text());",
+									"    console.log(\"Token saved successfully\");",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"Rathaur\",\n    \"password\": \"password123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/auth/token",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8080",
+							"path": ["auth", "token"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Profile Core",
+			"item": [
+				{
+					"name": "Create Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"Rathaur\",\n    \"bio\": \"Full Stack Developer\",\n    \"githubLink\": \"github.com/rathaur\",\n    \"linkedinLink\": \"linkedin.com/in/rathaur\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/portfolio/profiles",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8080",
+							"path": ["api", "portfolio", "profiles"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile (By ID)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/portfolio/profiles/1",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8080",
+							"path": ["api", "portfolio", "profiles", "1"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile (By Username)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/api/portfolio/profiles/user/Rathaur",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8080",
+							"path": ["api", "portfolio", "profiles", "user", "Rathaur"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Content Management",
+			"item": [
+				{
+					"name": "Add Project",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"title\": \"Nexus Platform\",\n    \"description\": \"Microservices Backend\",\n    \"techStack\": \"Java, Spring Boot\",\n    \"projectLink\": \"github.com/nexus\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/portfolio/profiles/1/projects",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8080",
+							"path": ["api", "portfolio", "profiles", "1", "projects"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Skill",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Java 21\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/portfolio/profiles/1/skills",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8080",
+							"path": ["api", "portfolio", "profiles", "1", "skills"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Education",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"institution\": \"Chandigarh University\",\n    \"degree\": \"MCA\",\n    \"startDate\": \"2024\",\n    \"endDate\": \"2026\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/portfolio/profiles/1/education",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8080",
+							"path": ["api", "portfolio", "profiles", "1", "education"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Experience",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"company\": \"Google\",\n    \"role\": \"SDE-1\",\n    \"description\": \"Worked on Search\",\n    \"startDate\": \"2025\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/portfolio/profiles/1/experience",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8080",
+							"path": ["api", "portfolio", "profiles", "1", "experience"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Certification",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"AWS Certified Developer\",\n    \"issuer\": \"Amazon\",\n    \"issueDate\": \"2024\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8080/api/portfolio/profiles/1/certifications",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8080",
+							"path": ["api", "portfolio", "profiles", "1", "certifications"]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "jwt_token",
+			"value": ""
+		}
+	]
+}
