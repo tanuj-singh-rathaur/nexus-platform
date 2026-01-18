@@ -136,6 +136,9 @@
           "name": "Get Profile (By ID)",
           "id": "10acdbcc-17ff-4b05-9549-65cabbafb520",
           "request": {
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [],
             "url": {
@@ -402,6 +405,37 @@
         }
       ],
       "id": "c9376a88-2c2b-423d-8f7c-267de19d2098"
+    },
+    {
+      "name": "http://localhost:9898/debug/trace",
+      "id": "f7f1d32b-35eb-420b-94bb-19a98645af30",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{jwt_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:9898/debug/trace",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "9898",
+          "path": [
+            "debug",
+            "trace"
+          ]
+        }
+      },
+      "response": []
     }
   ],
   "variable": [

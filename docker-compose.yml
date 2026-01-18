@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  # 1. DATABASE
+  postgres:
+    image: postgres:15
+    container_name: nexus-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: nexus_db # Default DB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # [CRITICAL] Creates the 'nexus_users' and 'nexus_portfolio' DBs
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - nexus-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus -d nexus_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. ZIPKIN
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - nexus-net
+
+  # 3. SERVICE REGISTRY
+  service-registry:
+    build: ./service-registry
+    container_name: service-registry
+    ports:
+      - "8761:8761"
+    environment:
+      - SERVER_PORT=8761
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+    networks:
+      - nexus-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      retries: 3
+
+  # 4. IDENTITY SERVICE
+  identity-service:
+    build: ./identity-service
+    container_name: identity-service
+    ports:
+      - "9898:9898"
+    environment:
+      - SERVER_PORT=9898
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      
+      # [FIX] Pointing to the correct internal hostname and DB name
+      - DB_HOST=postgres
+      - DB_NAME=nexus_users
+      - DB_USER=nexus
+      - DB_PASSWORD=root
+      
+      # [FIX] Correct Variable for Zipkin URL
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+    networks:
+      - nexus-net
+
+  # 5. PORTFOLIO SERVICE
+  portfolio-service:
+    build: ./portfolio-service
+    container_name: portfolio-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SERVER_PORT=8081
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      
+      # [FIX] Pointing to portfolio DB
+      - DB_HOST=postgres
+      - DB_NAME=nexus_portfolio
+      - DB_USER=nexus
+      - DB_PASSWORD=root
+      
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+    networks:
+      - nexus-net
+
+  # 6. API GATEWAY
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_PORT=8080
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
+      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+    depends_on:
+      service-registry:
+        condition: service_started
+      identity-service:
+        condition: service_started
+    networks:
+      - nexus-net
+
+networks:
+  nexus-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
