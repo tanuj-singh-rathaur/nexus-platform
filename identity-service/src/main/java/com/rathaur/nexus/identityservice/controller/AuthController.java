@@ -4,6 +4,7 @@ import com.rathaur.nexus.identityservice.dto.AuthRequest;
 import com.rathaur.nexus.identityservice.entity.UserCredential;
 import com.rathaur.nexus.identityservice.service.AuthService;
 
+import io.micrometer.observation.annotation.Observed;
 import jakarta.validation.Valid;
 
 import org.slf4j.Logger;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
+@Observed(name = "identity.controller")
 public class AuthController {
 
     private AuthService authService;
