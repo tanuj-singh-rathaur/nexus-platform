@@ -407,7 +407,7 @@
       "id": "c9376a88-2c2b-423d-8f7c-267de19d2098"
     },
     {
-      "name": "http://localhost:9898/debug/trace",
+      "name": "debug trace",
       "id": "f7f1d32b-35eb-420b-94bb-19a98645af30",
       "request": {
         "auth": {
@@ -432,6 +432,27 @@
           "path": [
             "debug",
             "trace"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "actuator",
+      "id": "7b210fb5-e0f9-4a53-a253-ed6ef7076e3b",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/actuator/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "actuator",
+            "health"
           ]
         }
       },

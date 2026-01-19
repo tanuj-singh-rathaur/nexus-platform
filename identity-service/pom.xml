@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>org.springframework.boot</groupId>
@@ -20,26 +20,32 @@
 		<spring-cloud.version>2025.1.0</spring-cloud.version>
 	</properties>
 
-<dependencies>
-	<!--  Distributed tracing (enabling traceId and logId (1st-3rd) and
+	<dependencies>
+		<!--  Distributed tracing (enabling traceId and logId (1st-3rd) and
 		Zipkin(exposing the ids to Zipkin server(4th) end-->
-	<dependency>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-micrometer-tracing-brave</artifactId>
-	</dependency>
-	<dependency>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-actuator</artifactId>
-	</dependency>
-	<dependency>
-		<groupId>io.micrometer</groupId>
-		<artifactId>micrometer-tracing-bridge-brave</artifactId>
-	</dependency>
-	<dependency>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-zipkin</artifactId>
-	</dependency>
-	<!--  Distributed tracing and Zipkin end-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-micrometer-tracing-brave</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-tracing-bridge-brave</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-zipkin</artifactId>
+		</dependency>
+		<!--  Distributed tracing and Zipkin end-->
+
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.8.0</version>
+		</dependency>
 
 		<dependency>
 			<groupId>com.rathaur.nexus</groupId>

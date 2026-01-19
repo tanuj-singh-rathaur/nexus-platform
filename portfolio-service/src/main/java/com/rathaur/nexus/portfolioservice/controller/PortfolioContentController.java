@@ -3,12 +3,14 @@ package com.rathaur.nexus.portfolioservice.controller;
 import com.rathaur.nexus.portfolioservice.common.ApiResponse;
 import com.rathaur.nexus.portfolioservice.entity.*;
 import com.rathaur.nexus.portfolioservice.service.ProfileService;
+import io.micrometer.observation.annotation.Observed;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/portfolio/profiles/{profileId}")
+@Observed(name = "portfolio.controller")
 public class PortfolioContentController {
 
     private final ProfileService profileService;
