@@ -7,9 +7,11 @@ import org.springframework.context.annotation.Bean;
 
 import io.micrometer.observation.ObservationRegistry;
 import io.micrometer.observation.aop.ObservedAspect;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableDiscoveryClient
+@EnableScheduling
 public class IdentityServiceApplication {
 
 	public static void main(String[] args) {

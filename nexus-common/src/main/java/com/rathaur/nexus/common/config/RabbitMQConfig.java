@@ -16,12 +16,59 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
-    public static final String EXCHANGE="user.registration.exchange";
-    public static final String QUEUE="user.registration.queue";
-    public static final String ROUTING_KEY="user.registration.routing.key";
+
 
     @Value("${spring.application.name:nexus-service}")
     private String applicationName;
+
+    public static final String EXCHANGE = "user.registration.exchange";
+    public static final String QUEUE = "user.registration.queue";
+    public static final String ROUTING_KEY = "user.registration.routing.key";
+
+    public static final String DLX_EXCHANGE = "user.registration.dlx";
+    public static final String DLQ_QUEUE = "user.registration.dlq";
+
+    // --- DEAD LETTER INFRASTRUCTURE ---
+    @Bean
+    public DirectExchange deadLetterExchange() {
+        return new DirectExchange(DLX_EXCHANGE);
+    }
+
+    @Bean
+    public Queue deadLetterQueue() {
+        return new Queue(DLQ_QUEUE);
+    }
+
+    @Bean
+    public Binding dlqBinding() {
+        return BindingBuilder.bind(deadLetterQueue()).to(deadLetterExchange()).with("deadLetter");
+    }
+
+    // --- MAIN INFRASTRUCTURE (Merged) ---
+    @Bean
+    public DirectExchange registrationExchange() {
+        return new DirectExchange(EXCHANGE);
+    }
+
+    @Bean
+    public Queue registrationQueue() {
+        return QueueBuilder.durable(QUEUE)
+                .withArgument("x-dead-letter-exchange", DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", "deadLetter")
+                .build();
+    }
+
+    @Bean
+    public Binding registrationBinding() {
+        return BindingBuilder.bind(registrationQueue())
+                .to(registrationExchange())
+                .with(ROUTING_KEY);
+    }
+
+    @Bean
+    public MessageConverter jsonMessageConverter() {
+        return new JacksonJsonMessageConverter();
+    }
 
     @Bean
     public ConnectionFactory connectionFactory(
@@ -39,26 +86,6 @@ public class RabbitMQConfig {
         factory.setConnectionNameStrategy(connectionFactory -> applicationName);
 
         return factory;
-    }
-
-    @Bean
-    public TopicExchange registrationExchange(){
-        return new TopicExchange(EXCHANGE);
-    }
-
-    @Bean
-    public Queue registrationQueue() {
-        return new Queue(QUEUE);
-    }
-
-    @Bean
-    public Binding registrationBinding(){
-        return BindingBuilder.bind(registrationQueue()).to(registrationExchange()).with(ROUTING_KEY);
-    }
-
-    @Bean
-    public MessageConverter jsonMessageConverter(){
-        return new JacksonJsonMessageConverter();
     }
 
 }
