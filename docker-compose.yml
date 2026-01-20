@@ -1,19 +1,30 @@
 version: '3.8'
 
+# 1. DEFINE COMMON CONFIGURATION (Anchor)
+# We use x-extensions to store the map of common variables
+x-common-env: &common-env
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://service-registry:8761/eureka/
+  ZIPKIN_URL: http://zipkin:9411/api/v2/spans
+  DB_HOST: nexus-db
+  DB_USER: nexus
+  DB_PASSWORD: root
+  # Spring Boot 4 specific: ensuring Loki URL is consistent
+  LOKI_URL: http://loki:3100/loki/api/v1/push
+
 services:
-  # 1. DATABASE
+  # 2. INFRASTRUCTURE: DATABASE
   postgres:
     image: postgres:15
     container_name: nexus-db
+    hostname: nexus-db
     ports:
       - "5432:5432"
     environment:
       POSTGRES_USER: nexus
       POSTGRES_PASSWORD: root
-      POSTGRES_DB: nexus_db # Default DB
+      POSTGRES_DB: nexus_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # [CRITICAL] Creates the 'nexus_users' and 'nexus_portfolio' DBs
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - nexus-net
@@ -23,7 +34,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # 2. ZIPKIN
+  # 3. INFRASTRUCTURE: OBSERVABILITY
   zipkin:
     image: openzipkin/zipkin
     container_name: zipkin
@@ -32,89 +43,102 @@ services:
     networks:
       - nexus-net
 
-  # 3. SERVICE REGISTRY
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - nexus-net
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    networks:
+      - nexus-net
+    depends_on:
+      - loki
+
+  # 4. SERVICE REGISTRY (Eureka)
   service-registry:
     build: ./service-registry
     container_name: service-registry
+    hostname: service-registry
     ports:
       - "8761:8761"
     environment:
-      - SERVER_PORT=8761
-      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
-      - EUREKA_CLIENT_FETCH_REGISTRY=false
+      SERVER_PORT: 8761
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
+      EUREKA_CLIENT_FETCH_REGISTRY: "false"
     networks:
       - nexus-net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
-      interval: 30s
+      interval: 20s
+      timeout: 5s
       retries: 3
 
-  # 4. IDENTITY SERVICE
+  # 5. IDENTITY SERVICE (Spring Boot 4.0.1)
   identity-service:
     build: ./identity-service
     container_name: identity-service
+    hostname: identity-service
     ports:
       - "9898:9898"
     environment:
-      - SERVER_PORT=9898
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
-      
-      # [FIX] Pointing to the correct internal hostname and DB name
-      - DB_HOST=postgres
-      - DB_NAME=nexus_users
-      - DB_USER=nexus
-      - DB_PASSWORD=root
-      
-      # [FIX] Correct Variable for Zipkin URL
-      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      <<: *common-env
+      SERVER_PORT: 9898
+      SPRING_APPLICATION_NAME: identity-service
+      DB_NAME: nexus_users
     depends_on:
       postgres:
         condition: service_healthy
       service-registry:
-        condition: service_started
+        condition: service_healthy
     networks:
       - nexus-net
 
-  # 5. PORTFOLIO SERVICE
+  # 6. PORTFOLIO SERVICE (Spring Boot 4.0.1)
   portfolio-service:
     build: ./portfolio-service
     container_name: portfolio-service
+    hostname: portfolio-service
     ports:
       - "8081:8081"
     environment:
-      - SERVER_PORT=8081
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
-      
-      # [FIX] Pointing to portfolio DB
-      - DB_HOST=postgres
-      - DB_NAME=nexus_portfolio
-      - DB_USER=nexus
-      - DB_PASSWORD=root
-      
-      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      <<: *common-env
+      SERVER_PORT: 8081
+      SPRING_APPLICATION_NAME: portfolio-service
+      DB_NAME: nexus_portfolio
     depends_on:
       postgres:
         condition: service_healthy
       service-registry:
-        condition: service_started
+        condition: service_healthy
     networks:
       - nexus-net
 
-  # 6. API GATEWAY
+  # 7. API GATEWAY (Spring Boot 3.4.2)
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
+    hostname: api-gateway
     ports:
       - "8080:8080"
     environment:
-      - SERVER_PORT=8080
-      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://service-registry:8761/eureka/
-      - ZIPKIN_URL=http://zipkin:9411/api/v2/spans
+      <<: *common-env
+      SERVER_PORT: 8080
+      SPRING_APPLICATION_NAME: api-gateway
     depends_on:
       service-registry:
-        condition: service_started
-      identity-service:
-        condition: service_started
+        condition: service_healthy
     networks:
       - nexus-net
 
