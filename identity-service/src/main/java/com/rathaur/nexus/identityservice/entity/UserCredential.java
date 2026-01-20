@@ -24,6 +24,10 @@ public class UserCredential {
     @NotBlank(message = "Name cannot be empty")
     private String name;
 
+    @NotBlank(message = "Username cannot be empty")
+    @Column(unique = true) // Ensures handles like @rathaur are unique
+    private String username;
+
     @NotBlank(message = "Email cannot be empty")
     @Email(message = "Invalid email format")
     @Column(unique = true)
