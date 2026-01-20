@@ -1,5 +1,6 @@
 package com.rathaur.nexus.portfolioservice.service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -39,9 +40,19 @@ public class ProfileService {
 
     public Profile createProfile(Profile profile) {
         // Optional: Check if username exists before saving
-        if(profile.getUsername() != null && profileRepository.findByUsername(profile.getUsername()).isPresent()){
-            throw new RuntimeException("Username already exists!");
+        // 1. Validation Logic
+        if (profile.getUsername() != null &&
+                profileRepository.findByUsername(profile.getUsername()).isPresent()) {
+            throw new RuntimeException("Profile for this username already exists!");
         }
+
+        // 2. Initialize Collections (Ensures JSON response shows [] instead of null)
+        if (profile.getProjects() == null) profile.setProjects(new ArrayList<>());
+        if (profile.getEducation() == null) profile.setEducation(new ArrayList<>());
+        if (profile.getSkills() == null) profile.setSkills(new ArrayList<>());
+        if (profile.getExperienceList() == null) profile.setExperienceList(new ArrayList<>());
+        if (profile.getCertifications() == null) profile.setCertifications(new ArrayList<>());
+
         return profileRepository.save(profile);
     }
 
