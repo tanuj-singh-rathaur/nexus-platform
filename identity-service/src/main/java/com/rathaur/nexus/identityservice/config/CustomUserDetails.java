@@ -1,35 +1,39 @@
 package com.rathaur.nexus.identityservice.config;
 
 import com.rathaur.nexus.identityservice.entity.UserCredential;
-import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
 
-/**
- * @author Tanuj Singh Rathaur
- * @date 1/17/2026
- */
 public class CustomUserDetails implements UserDetails {
 
-    private String username;
-    private String password;
+    private final String username;
+    private final String password;
+    private final boolean isEnabled;
+    private final boolean isLocked;
+    private final List<GrantedAuthority> authorities;
 
-    public CustomUserDetails(UserCredential userCredential){
-        this.username = userCredential.getName();
+    public CustomUserDetails(UserCredential userCredential) {
+        // Fix: Use unique username for login, not display name
+        this.username = userCredential.getUsername();
         this.password = userCredential.getPassword();
-    }
+        this.isEnabled = userCredential.isEnabled();
+        this.isLocked = userCredential.isLocked();
 
+        // Map Role Enum to Spring Authority
+        this.authorities = List.of(new SimpleGrantedAuthority(userCredential.getRole().name()));
+    }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        return authorities;
     }
 
     @Override
-    public @Nullable String getPassword() {
+    public String getPassword() {
         return password;
     }
 
@@ -45,7 +49,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return !isLocked; // User is unlocked if isLocked is false
     }
 
     @Override
@@ -55,6 +59,6 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return isEnabled;
     }
 }

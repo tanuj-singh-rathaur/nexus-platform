@@ -10,6 +10,7 @@ import java.io.Serializable;
  */
 public record UserRegistrationEvent(@JsonProperty("username") String username,
                                     @JsonProperty("email") String email,
-                                    @JsonProperty("fullName") String fullName
+                                    @JsonProperty("fullName") String fullName,
+                                    @JsonProperty("role") String role
 ) implements Serializable {
 }

@@ -19,7 +19,12 @@ public interface OutboxRepository extends JpaRepository<OutboxMessage, Long> {
     // Used by the background worker to find messages to publish
     List<OutboxMessage> findByProcessedFalse();
 
+    /* Find only unprocessed messages that haven't exceeded retry limits */
+    List<OutboxMessage> findByProcessedFalseAndRetryCountLessThan(int maxRetries);
+
+    /* For the cleanup task */
     @Modifying
-    @Query("DELETE FROM OutboxMessage o WHERE o.processed = true AND o.createdAt < :cutoff")
+    @Query("DELETE FROM OutboxMessage m WHERE m.processed = true AND m.processedAt < :cutoff")
     void deleteProcessedMessagesOlderThan(LocalDateTime cutoff);
+
 }

@@ -1,19 +1,27 @@
 package com.rathaur.nexus.portfolioservice.service;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // Use Spring's Transactional for better integration
-
 import com.rathaur.nexus.portfolioservice.entity.*;
+import com.rathaur.nexus.portfolioservice.exception.ProfileNotFoundException;
 import com.rathaur.nexus.portfolioservice.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+
+/**
+ * Service orchestrating Portfolio Profile operations.
+ * Designed for stateless operation where identity is derived from JWT.
+ * * @author Tanuj Singh Rathaur
+ * @date 1/21/2026
+ */
 @Service
 @Transactional
 public class ProfileService {
 
-    // 1. Declare all Repositories
+    private static final Logger log = LoggerFactory.getLogger(ProfileService.class);
+
     private final ProfileRepository profileRepository;
     private final ProjectRepository projectRepository;
     private final SkillRepository skillRepository;
@@ -21,7 +29,6 @@ public class ProfileService {
     private final ExperienceRepository experienceRepository;
     private final CertificationRepository certificationRepository;
 
-    // 2. Constructor Injection for all Repositories
     public ProfileService(ProfileRepository profileRepository,
                           ProjectRepository projectRepository,
                           SkillRepository skillRepository,
@@ -36,96 +43,89 @@ public class ProfileService {
         this.certificationRepository = certificationRepository;
     }
 
-    // --- PROFILE OPERATIONS ---
-
+    /**
+     * Idempotent profile creation. Used by RabbitMQ listeners.
+     */
     public Profile createProfile(Profile profile) {
-        // Optional: Check if username exists before saving
-        // 1. Validation Logic
-        if (profile.getUsername() != null &&
-                profileRepository.findByUsername(profile.getUsername()).isPresent()) {
-            throw new RuntimeException("Profile for this username already exists!");
-        }
+        String username = profile.getUsername().toLowerCase().trim();
 
-        // 2. Initialize Collections (Ensures JSON response shows [] instead of null)
-        if (profile.getProjects() == null) profile.setProjects(new ArrayList<>());
-        if (profile.getEducation() == null) profile.setEducation(new ArrayList<>());
-        if (profile.getSkills() == null) profile.setSkills(new ArrayList<>());
-        if (profile.getExperienceList() == null) profile.setExperienceList(new ArrayList<>());
-        if (profile.getCertifications() == null) profile.setCertifications(new ArrayList<>());
-
-        return profileRepository.save(profile);
-    }
-
-    public List<Profile> getAllProfile() {
-        return profileRepository.findAll();
-    }
-
-    public Profile getProfileById(Long profileId){
-        return profileRepository.findById(profileId)
-                .orElseThrow(() -> new RuntimeException("Profile Not Found with ID: " + profileId));
+        return profileRepository.findByUsername(username)
+                .map(existing -> {
+                    log.info("SaaS-INFO: Profile already exists for user: {}", username);
+                    return existing;
+                })
+                .orElseGet(() -> {
+                    log.info("SaaS-INFO: Initializing new profile for user: {}", username);
+                    profile.setUsername(username);
+                    initializeCollections(profile);
+                    return profileRepository.save(profile);
+                });
     }
 
     public Profile getProfileByUsername(String username) {
-        return profileRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Profile Not Found with username: " + username));
+        return profileRepository.findByUsername(username.toLowerCase())
+                .orElseThrow(() -> new ProfileNotFoundException("Profile not found for username: " + username));
     }
 
-    public void deleteProfile(Long id) {
-        if (!profileRepository.existsById(id)) {
-            throw new RuntimeException("Cannot delete. Profile Not Found with ID: " + id);
-        }
-        profileRepository.deleteById(id);
+    /**
+     * Updates profile data.
+     * Guarded to only update allowed fields.
+     */
+    public Profile updateProfile(String username, Profile incoming) {
+        Profile existing = getProfileByUsername(username);
+
+        // Manual mapping protects immutable fields like 'id' and 'username'
+        if (incoming.getFullName() != null) existing.setFullName(incoming.getFullName());
+        if (incoming.getEmail() != null) existing.setEmail(incoming.getEmail());
+        if (incoming.getTitle() != null) existing.setTitle(incoming.getTitle());
+        if (incoming.getAboutMe() != null) existing.setAboutMe(incoming.getAboutMe());
+
+        return profileRepository.save(existing);
     }
 
-    public Profile updateProfile(Long id, Profile incomingProfile) {
-        Profile existingProfile = getProfileById(id);
-
-        // Update fields only if they are not null (Patch logic)
-        if (incomingProfile.getFullName() != null) existingProfile.setFullName(incomingProfile.getFullName());
-        if (incomingProfile.getTitle() != null) existingProfile.setTitle(incomingProfile.getTitle());
-        if (incomingProfile.getAboutMe() != null) existingProfile.setAboutMe(incomingProfile.getAboutMe());
-        if (incomingProfile.getTheme() != null) existingProfile.setTheme(incomingProfile.getTheme());
-        if (incomingProfile.getEmail() != null) existingProfile.setEmail(incomingProfile.getEmail());
-        if (incomingProfile.getPhone() != null) existingProfile.setPhone(incomingProfile.getPhone());
-
-        // Social Links
-        if (incomingProfile.getLinkedinUrl() != null) existingProfile.setLinkedinUrl(incomingProfile.getLinkedinUrl());
-        if (incomingProfile.getGithubUrl() != null) existingProfile.setGithubUrl(incomingProfile.getGithubUrl());
-        if (incomingProfile.getTwitterUrl() != null) existingProfile.setTwitterUrl(incomingProfile.getTwitterUrl());
-        if (incomingProfile.getWebsiteUrl() != null) existingProfile.setWebsiteUrl(incomingProfile.getWebsiteUrl());
-
-        return profileRepository.save(existingProfile);
+    public void deleteProfile(String username) {
+        Profile profile = getProfileByUsername(username);
+        profileRepository.delete(profile);
     }
 
-    // --- CHILD ENTITY OPERATIONS (Add Items) ---
+    /* --- Child Entity Operations --- */
 
-    public Project addProjectToProfile(Long profileId, Project project){
-        Profile profile = getProfileById(profileId); // Reusing the helper method
-        project.setProfile(profile);
+    public Project addProject(String username, Project project) {
+        Profile profile = getProfileByUsername(username);
+        project.setProfile(profile); // Enforce Relationship
         return projectRepository.save(project);
     }
 
-    public Skill addSkillToProfile(Long profileId, Skill skill) {
-        Profile profile = getProfileById(profileId);
+    public Skill addSkill(String username, Skill skill) {
+        Profile profile = getProfileByUsername(username);
         skill.setProfile(profile);
         return skillRepository.save(skill);
     }
 
-    public Education addEducationToProfile(Long profileId, Education education) {
-        Profile profile = getProfileById(profileId);
+    public Education addEducation(String username, Education education) {
+        Profile profile = getProfileByUsername(username);
         education.setProfile(profile);
         return educationRepository.save(education);
     }
 
-    public Experience addExperienceToProfile(Long profileId, Experience experience) {
-        Profile profile = getProfileById(profileId);
+    public Experience addExperience(String username, Experience experience) {
+        Profile profile = getProfileByUsername(username);
         experience.setProfile(profile);
         return experienceRepository.save(experience);
     }
 
-    public Certification addCertificationToProfile(Long profileId, Certification certification) {
-        Profile profile = getProfileById(profileId);
+    public Certification addCertification(String username, Certification certification) {
+        Profile profile = getProfileByUsername(username);
         certification.setProfile(profile);
         return certificationRepository.save(certification);
+    }
+
+    /* Helper to ensure no null pointer exceptions on new profiles */
+    private void initializeCollections(Profile profile) {
+        profile.setProjects(new ArrayList<>());
+        profile.setEducation(new ArrayList<>());
+        profile.setSkills(new ArrayList<>());
+        profile.setExperienceList(new ArrayList<>());
+        profile.setCertifications(new ArrayList<>());
     }
 }

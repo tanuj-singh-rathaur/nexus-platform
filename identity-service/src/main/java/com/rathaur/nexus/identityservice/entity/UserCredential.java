@@ -1,5 +1,6 @@
 package com.rathaur.nexus.identityservice.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -18,7 +19,7 @@ import lombok.NoArgsConstructor;
 public class UserCredential {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // Better for MySQL/Postgres
     private Integer id;
 
     @NotBlank(message = "Name cannot be empty")
@@ -33,6 +34,15 @@ public class UserCredential {
     @Column(unique = true)
     private String email;
 
+    @JsonIgnore
     @NotBlank(message = "Password cannot be empty")
     private String password;
+
+    @Enumerated(EnumType.STRING)
+    private Role role = Role.ROLE_USER;
+
+    private boolean isEnabled = true;
+    private boolean isLocked = false;
 }
+
+

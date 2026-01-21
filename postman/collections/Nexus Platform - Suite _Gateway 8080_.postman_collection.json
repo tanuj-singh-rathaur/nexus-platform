@@ -1,5 +1,6 @@
 {
   "info": {
+    "_postman_id": "06585a4d-9346-4778-b815-9fd350813d1e",
     "name": "Nexus Platform - Suite (Gateway 8080)",
     "description": "Register -> Login -> Portfolio calls. Uses env vars: base_url, jwt_token, current_username, temp_username, temp_password",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -20,14 +21,19 @@
                   "pm.environment.set('temp_username', requestBody.username);",
                   "pm.environment.set('temp_password', requestBody.password);",
                   "console.log('Credentials cached for login');"
-                ]
+                ],
+                "id": "d00bd44a-a95b-40b1-b349-e578cc1d491b"
               }
             }
           ],
+          "id": "a9d043c1-5f71-4367-941e-dbca9e5b1c39",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -35,10 +41,18 @@
             },
             "url": {
               "raw": "{{base_url}}/api/identity/auth/register",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "identity", "auth", "register" ]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "identity",
+                "auth",
+                "register"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Login (Token)",
@@ -58,14 +72,19 @@
                   "}",
                   "console.log('jwt_token:', pm.environment.get('jwt_token'));",
                   "console.log('current_username:', pm.environment.get('current_username'));"
-                ]
+                ],
+                "id": "e684f1c5-cc9e-4064-9949-7355d149aab9"
               }
             }
           ],
+          "id": "8c09c6e7-68e4-4b20-87a5-f9ef690714c9",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -73,34 +92,56 @@
             },
             "url": {
               "raw": "{{base_url}}/api/identity/auth/token",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "identity", "auth", "token" ]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "identity",
+                "auth",
+                "token"
+              ]
             }
-          }
+          },
+          "response": []
         }
-      ]
+      ],
+      "id": "827b05a2-8ef6-48f1-8bb2-15427ca888ed"
     },
     {
       "name": "2. Portfolio Core",
       "item": [
         {
           "name": "Get Full Profile",
+          "id": "a6c518a1-8658-4974-ab28-708009f10a85",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}" ]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "portfolio",
+                "profiles",
+                "{{current_username}}"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Update Profile (Patch)",
+          "id": "b326e656-6087-4e23-8025-d0a55b19c96a",
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -108,22 +149,56 @@
             },
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}" ]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "portfolio",
+                "profiles",
+                "{{current_username}}"
+              ]
             }
-          }
+          },
+          "response": []
+        },
+        {
+          "name": "Get my profile",
+          "id": "6b7a25c5-9c23-4c89-9881-58bec79f8f9f",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "portfolio",
+                "profiles",
+                "{{current_username}}"
+              ]
+            }
+          },
+          "response": []
         }
-      ]
+      ],
+      "id": "8d14b616-4f77-41c9-958f-17fe112d72a7"
     },
     {
       "name": "3. Portfolio Content (Nested)",
       "item": [
         {
           "name": "Add Project",
+          "id": "fb776fbc-ce3d-45f9-a1cf-3f20d1aaf972",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -131,17 +206,30 @@
             },
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/projects",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}", "projects" ]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "portfolio",
+                "profiles",
+                "{{current_username}}",
+                "projects"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Add Skill",
+          "id": "68c70e6e-98c7-46a6-9dc4-a6081f780687",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -149,17 +237,30 @@
             },
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/skills",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}", "skills" ]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "portfolio",
+                "profiles",
+                "{{current_username}}",
+                "skills"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Add Education",
+          "id": "d83c8090-a2d8-4251-b1b3-ed4174cd39cb",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -167,17 +268,30 @@
             },
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/education",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}", "education" ]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "portfolio",
+                "profiles",
+                "{{current_username}}",
+                "education"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Add Experience",
+          "id": "9bd5ad1e-08bf-4e47-949a-16126160c7e5",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -185,17 +299,30 @@
             },
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/experience",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}", "experience" ]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "portfolio",
+                "profiles",
+                "{{current_username}}",
+                "experience"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Add Certification",
+          "id": "0fe410da-045f-44d1-b4d8-677858d9d7d1",
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -203,70 +330,128 @@
             },
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/certifications",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}", "certifications" ]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "portfolio",
+                "profiles",
+                "{{current_username}}",
+                "certifications"
+              ]
             }
-          }
+          },
+          "response": []
         }
-      ]
+      ],
+      "id": "9494dad4-4a6e-44e0-8edb-4c7162e9295b"
     },
     {
       "name": "4. Infrastructure & Monitoring",
       "item": [
         {
           "name": "Identity Health",
+          "id": "8bb09e15-ac7c-4124-a833-e7bdc927e6b1",
           "request": {
             "method": "GET",
+            "header": [],
             "url": {
               "raw": "{{base_url}}/api/identity/actuator/health",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "identity", "actuator", "health" ]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "identity",
+                "actuator",
+                "health"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Portfolio Health",
+          "id": "12bbc756-04ff-4752-b61c-377800df5968",
           "request": {
             "method": "GET",
+            "header": [],
             "url": {
               "raw": "{{base_url}}/api/portfolio/actuator/health",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "actuator", "health" ]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "portfolio",
+                "actuator",
+                "health"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Gateway Routes",
+          "id": "e5c03202-ea85-408b-b5c3-c5974bbe7743",
           "request": {
             "method": "GET",
+            "header": [],
             "url": {
               "raw": "{{base_url}}/actuator/gateway/routes",
-              "host": [ "{{base_url}}" ],
-              "path": [ "actuator", "gateway", "routes" ]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "actuator",
+                "gateway",
+                "routes"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Portfolio Swagger Docs",
+          "id": "21572dc8-2b2e-442b-8efc-b6d8af00aa26",
           "request": {
             "method": "GET",
+            "header": [],
             "url": {
               "raw": "{{base_url}}/api/portfolio/v3/api-docs",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "v3", "api-docs" ]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "portfolio",
+                "v3",
+                "api-docs"
+              ]
             }
-          }
+          },
+          "response": []
         }
-      ]
+      ],
+      "id": "b6eddcc7-e758-4ed7-a51e-f32ebfffc910"
     }
   ],
   "auth": {
     "type": "bearer",
     "bearer": [
-      { "key": "token", "value": "{{jwt_token}}", "type": "string" }
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
     ]
   },
   "variable": [
-    { "key": "base_url", "value": "http://localhost:8080" }
+    {
+      "id": "8f4604d0-9e12-4c64-9e12-114966953a68",
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    }
   ]
 }

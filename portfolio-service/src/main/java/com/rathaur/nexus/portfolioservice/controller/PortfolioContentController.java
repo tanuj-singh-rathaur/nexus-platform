@@ -1,56 +1,81 @@
 package com.rathaur.nexus.portfolioservice.controller;
 
-import com.rathaur.nexus.portfolioservice.common.ApiResponse;
+import com.rathaur.nexus.common.dto.ApiResponse;
 import com.rathaur.nexus.portfolioservice.entity.*;
 import com.rathaur.nexus.portfolioservice.service.ProfileService;
 import io.micrometer.observation.annotation.Observed;
+import io.micrometer.tracing.Tracer;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+/**
+ * Controller for managing portfolio sub-content (Projects, Skills, etc.).
+ * Uses 'Authentication' to ensure users can only modify their own data.
+ * * @author Tanuj Singh Rathaur
+ * @date 1/21/2026
+ */
 @RestController
-@RequestMapping("/api/portfolio/profiles/{profileId}")
-@Observed(name = "portfolio.controller")
+@RequestMapping("/api/portfolio/content")
+@Observed(name = "portfolio.content.controller")
 public class PortfolioContentController {
 
     private final ProfileService profileService;
+    private final Tracer tracer;
 
-    public PortfolioContentController(ProfileService profileService) {
+    public PortfolioContentController(ProfileService profileService, Tracer tracer) {
         this.profileService = profileService;
+        this.tracer = tracer;
     }
 
-    // --- PROJECTS ---
     @PostMapping("/projects")
-    public ResponseEntity<ApiResponse<Project>> addProject(@PathVariable Long profileId, @RequestBody Project project) {
-        Project savedProject = profileService.addProjectToProfile(profileId, project);
-        return new ResponseEntity<>(new ApiResponse<>("Project added successfully", savedProject), HttpStatus.CREATED);
+    @PreAuthorize("hasAnyRole('USER', 'PRO', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Project>> addProject(Authentication auth, @RequestBody Project project) {
+        Project saved = profileService.addProject(auth.getName(), project);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Project added successfully", saved, getTraceId()));
     }
 
-    // --- SKILLS ---
     @PostMapping("/skills")
-    public ResponseEntity<ApiResponse<Skill>> addSkill(@PathVariable Long profileId, @RequestBody Skill skill) {
-        Skill savedSkill = profileService.addSkillToProfile(profileId, skill);
-        return new ResponseEntity<>(new ApiResponse<>("Skill added successfully", savedSkill), HttpStatus.CREATED);
+    @PreAuthorize("hasAnyRole('USER', 'PRO', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Skill>> addSkill(Authentication auth, @RequestBody Skill skill) {
+        Skill saved = profileService.addSkill(auth.getName(), skill);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Skill added successfully", saved, getTraceId()));
     }
 
-    // --- EDUCATION ---
     @PostMapping("/education")
-    public ResponseEntity<ApiResponse<Education>> addEducation(@PathVariable Long profileId, @RequestBody Education education) {
-        Education savedEducation = profileService.addEducationToProfile(profileId, education);
-        return new ResponseEntity<>(new ApiResponse<>("Education added successfully", savedEducation), HttpStatus.CREATED);
+    @PreAuthorize("hasAnyRole('USER', 'PRO', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Education>> addEducation(Authentication auth, @RequestBody Education education) {
+        Education saved = profileService.addEducation(auth.getName(), education);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Education added successfully", saved, getTraceId()));
     }
 
-    // --- EXPERIENCE ---
     @PostMapping("/experience")
-    public ResponseEntity<ApiResponse<Experience>> addExperience(@PathVariable Long profileId, @RequestBody Experience experience) {
-        Experience savedExperience = profileService.addExperienceToProfile(profileId, experience);
-        return new ResponseEntity<>(new ApiResponse<>("Experience added successfully", savedExperience), HttpStatus.CREATED);
+    @PreAuthorize("hasAnyRole('USER', 'PRO', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Experience>> addExperience(Authentication auth, @RequestBody Experience experience) {
+        Experience saved = profileService.addExperience(auth.getName(), experience);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Experience added successfully", saved, getTraceId()));
     }
 
-    // --- CERTIFICATIONS ---
     @PostMapping("/certifications")
-    public ResponseEntity<ApiResponse<Certification>> addCertification(@PathVariable Long profileId, @RequestBody Certification certification) {
-        Certification savedCertification = profileService.addCertificationToProfile(profileId, certification);
-        return new ResponseEntity<>(new ApiResponse<>("Certification added successfully", savedCertification), HttpStatus.CREATED);
+    @PreAuthorize("hasAnyRole('USER', 'PRO', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Certification>> addCertification(Authentication auth, @RequestBody Certification cert) {
+        Certification saved = profileService.addCertification(auth.getName(), cert);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Certification added successfully", saved, getTraceId()));
+    }
+
+    /**
+     * Helper to extract current trace ID for unified observability across microservices.
+     */
+    private String getTraceId() {
+        return (tracer.currentSpan() != null)
+                ? tracer.currentSpan().context().traceId()
+                : "N/A";
     }
 }

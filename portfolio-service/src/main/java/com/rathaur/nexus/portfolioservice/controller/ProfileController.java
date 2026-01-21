@@ -1,51 +1,70 @@
 package com.rathaur.nexus.portfolioservice.controller;
 
-import com.rathaur.nexus.portfolioservice.common.ApiResponse;
+import com.rathaur.nexus.common.dto.ApiResponse;
 import com.rathaur.nexus.portfolioservice.entity.Profile;
 import com.rathaur.nexus.portfolioservice.service.ProfileService;
 import io.micrometer.observation.annotation.Observed;
-import org.springframework.http.HttpStatus;
+import io.micrometer.tracing.Tracer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/portfolio/profiles")
-@Observed(name = "portfolio.controller")
+@Observed(name = "portfolio.profile.controller")
 public class ProfileController {
 
+    private static final Logger log = LoggerFactory.getLogger(ProfileController.class);
     private final ProfileService profileService;
+    private final Tracer tracer;
 
-    public ProfileController(ProfileService profileService) {
+    public ProfileController(ProfileService profileService, Tracer tracer) {
         this.profileService = profileService;
+        this.tracer = tracer;
     }
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<Profile>> createProfile(@RequestBody Profile profile) {
-        Profile createdProfile = profileService.createProfile(profile);
-        return new ResponseEntity<>(new ApiResponse<>("Profile created successfully", createdProfile), HttpStatus.CREATED);
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<Profile>> getProfile(@PathVariable Long id) {
-        Profile profile = profileService.getProfileById(id);
-        return ResponseEntity.ok(new ApiResponse<>("Profile fetched successfully", profile));
-    }
-
-    @GetMapping("/user/{username}")
-    public ResponseEntity<ApiResponse<Profile>> getProfileByUsername(@PathVariable String username) {
+    /**
+     * PUBLIC ENDPOINT: Anyone can view a profile by username.
+     * We keep this because profiles are meant to be shared.
+     */
+    @GetMapping("/{username}")
+    public ResponseEntity<ApiResponse<Profile>> getPublicProfile(@PathVariable String username) {
         Profile profile = profileService.getProfileByUsername(username);
-        return ResponseEntity.ok(new ApiResponse<>("Profile fetched successfully", profile));
+        return ResponseEntity.ok(ApiResponse.ok("Profile fetched", profile, getTraceId()));
     }
 
-    @PatchMapping("/{id}")
-    public ResponseEntity<ApiResponse<Profile>> updateProfile(@PathVariable Long id, @RequestBody Profile profile) {
-        Profile updatedProfile = profileService.updateProfile(id, profile);
-        return ResponseEntity.ok(new ApiResponse<>("Profile updated successfully", updatedProfile));
+    /**
+     * SECURE ENDPOINT: Fetch the profile of the logged-in user.
+     * No username in URL.
+     */
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyAuthority('ROLE_USER', 'ROLE_PRO', 'ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<Profile>> getMyProfile(Authentication auth) {
+        if (auth == null) {
+            log.error("SECURITY-CHECK: Authentication is NULL! (The JWT Filter likely didn't run)");
+        } else {
+            log.info("SECURITY-CHECK: User: {} | Authorities: {} | Authenticated: {}",
+                    auth.getName(), auth.getAuthorities(), auth.isAuthenticated());
+        }
+        Profile profile = profileService.getProfileByUsername(auth.getName());
+        return ResponseEntity.ok(ApiResponse.ok("My profile fetched", profile, getTraceId()));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteProfile(@PathVariable Long id) {
-        profileService.deleteProfile(id);
-        return ResponseEntity.ok(new ApiResponse<>("Profile deleted successfully", true));
+    /**
+     * SECURE ENDPOINT: Update the profile of the logged-in user.
+     */
+    @PatchMapping("/me")
+    @PreAuthorize("hasAnyAuthority('ROLE_USER', 'ROLE_PRO', 'ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<Profile>> updateMyProfile(Authentication auth, @RequestBody Profile profile) {
+        // auth.getName() extracts the 'sub' (username) from the verified JWT
+        Profile updated = profileService.updateProfile(auth.getName(), profile);
+        return ResponseEntity.ok(ApiResponse.ok("Profile updated successfully", updated, getTraceId()));
+    }
+
+    private String getTraceId() {
+        return (tracer.currentSpan() != null) ? tracer.currentSpan().context().traceId() : "N/A";
     }
 }

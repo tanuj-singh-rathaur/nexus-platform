@@ -4,9 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rathaur.nexus.common.event.UserRegistrationEvent;
 import com.rathaur.nexus.common.security.JwtUtils;
+import com.rathaur.nexus.common.utils.SecurityConstants;
 import com.rathaur.nexus.identityservice.dto.AuthRequest;
 import com.rathaur.nexus.identityservice.entity.OutboxMessage;
+import com.rathaur.nexus.identityservice.entity.Role;
 import com.rathaur.nexus.identityservice.entity.UserCredential;
+import com.rathaur.nexus.identityservice.exception.UserAlreadyExistsException;
 import com.rathaur.nexus.identityservice.repository.OutboxRepository;
 import com.rathaur.nexus.identityservice.repository.UserCredentialRepository;
 import io.micrometer.tracing.Tracer;
@@ -16,16 +19,29 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Service handling Identity and Access Management (IAM) logic.
+ * Implements the Transactional Outbox pattern for reliable event delivery.
+ * * @author Tanuj Singh Rathaur
+ * @date 1/21/2026
+ */
 @Service
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
+
+    private static final long ACCESS_EXPIRY_MS = 10 * 60 * 1000L;
+    private static final long REFRESH_EXPIRY_MS = 15L * 24 * 60 * 60 * 1000L;
 
     private final UserCredentialRepository userCredentialRepository;
     private final OutboxRepository outboxRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
-    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private final ObjectMapper objectMapper;
     private final Tracer tracer;
 
@@ -45,47 +61,84 @@ public class AuthService {
 
     @Transactional
     public String saveUser(AuthRequest request) {
-        // 1. Create Entity and Encode Password
+        validateUserUniqueness(request.getUsername(), request.getEmail());
+
+        UserCredential credential = mapToEntity(request);
+        userCredentialRepository.save(credential);
+
+        UserRegistrationEvent event = new UserRegistrationEvent(
+                credential.getUsername(),
+                credential.getEmail(),
+                credential.getName(),
+                credential.getRole().name()
+        );
+
+        // Atomic operation: user and outbox message committed together
+        persistOutboxMessage(credential.getUsername(), event);
+
+        log.info("IDENTITY-SERVICE: Successfully registered user and saved outbox event: {}", credential.getUsername());
+        return "User " + credential.getUsername() + " registered successfully.";
+    }
+
+    public void validateToken(String token) {
+        jwtUtils.parseAndValidate(token);
+    }
+
+    public String generateAccessToken(String username, List<String> roles) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(SecurityConstants.CLAIM_TOKEN_TYPE, SecurityConstants.TOKEN_TYPE_ACCESS);
+        claims.put(SecurityConstants.CLAIM_ROLES, roles);
+        return jwtUtils.generateToken(claims, username, ACCESS_EXPIRY_MS);
+    }
+
+    public String generateRefreshToken(String username) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put(SecurityConstants.CLAIM_TOKEN_TYPE, SecurityConstants.TOKEN_TYPE_REFRESH);
+        return jwtUtils.generateToken(claims, username, REFRESH_EXPIRY_MS);
+    }
+
+    private void validateUserUniqueness(String username, String email) {
+        if (userCredentialRepository.findByUsername(username).isPresent()) {
+            throw new UserAlreadyExistsException("Username '" + username + "' is already taken.");
+        }
+        if (userCredentialRepository.findByEmail(email).isPresent()) {
+            throw new UserAlreadyExistsException("Email '" + email + "' is already registered.");
+        }
+    }
+
+    private UserCredential mapToEntity(AuthRequest request) {
         UserCredential credential = new UserCredential();
         credential.setName(request.getName());
         credential.setUsername(request.getUsername());
         credential.setEmail(request.getEmail());
         credential.setPassword(passwordEncoder.encode(request.getPassword()));
+        credential.setRole(Role.ROLE_USER);
+        return credential;
+    }
 
-        userCredentialRepository.save(credential);
+    private void persistOutboxMessage(String aggregateId, UserRegistrationEvent event) {
+        // Using the Builder pattern for a senior-level, readable implementation
+        OutboxMessage outboxMessage = OutboxMessage.builder()
+                .aggregateId(aggregateId)
+                .payload(serializeToJson(event))
+                .processed(false)
+                .retryCount(0)
+                .build();
 
-        // 2. Prepare Event for Portfolio Service (Clean data only)
-        UserRegistrationEvent event = new UserRegistrationEvent(
-                request.getUsername(),
-                request.getEmail(),
-                request.getName()
-        );
-
-        OutboxMessage outboxMessage = new OutboxMessage();
-        outboxMessage.setAggregateId(request.getUsername());
-        outboxMessage.setPayload(serializeToJson(event));
-
-        if(Objects.nonNull(tracer.currentSpan())){
+        if (Objects.nonNull(tracer.currentSpan())) {
             outboxMessage.setSpanId(tracer.currentSpan().context().spanId());
             outboxMessage.setTraceId(tracer.currentSpan().context().traceId());
         }
 
         outboxRepository.save(outboxMessage);
-
-        log.info("✅ SUCCESS: User saved and registration event published for: {}", request.getUsername());
-        return "User " + request.getUsername() + " registered successfully. Profile creation triggered.";
     }
 
-    public String generateToken(String username) {
-        return jwtUtils.generateToken(username);
-    }
-
-    private String serializeToJson(UserRegistrationEvent event) {
+    private String serializeToJson(Object object) {
         try {
-            return objectMapper.writeValueAsString(event);
+            return objectMapper.writeValueAsString(object);
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Failed to convert event to JSON", e);
+            log.error("JSON-ERROR: Failed to serialize event for aggregate: {}", object);
+            throw new RuntimeException("Internal serialization error during event creation");
         }
     }
-
 }
