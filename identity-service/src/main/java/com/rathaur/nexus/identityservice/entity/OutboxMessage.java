@@ -41,10 +41,12 @@ public class OutboxMessage {
     private String spanId;
 
     /* Status tracking */
+    @Builder.Default
     @Column(nullable = false)
     private boolean processed = false;
 
     /* Resilience: Track retry attempts to handle 'poison' messages */
+    @Builder.Default
     @Column(nullable = false)
     private int retryCount = 0;
 

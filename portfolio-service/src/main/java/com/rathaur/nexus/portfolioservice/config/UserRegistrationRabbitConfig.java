@@ -6,57 +6,36 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * RabbitMQ Implementation for the Portfolio Service.
- * Defines the specific Queue and Bindings required to consume
- * User Registration events from the Identity Service.
- *
- * @author Tanuj Singh Rathaur
+ * Portfolio-Specific Messaging Configuration.
+ * Owns the consumer queues for incoming user registrations.
  */
 @Configuration
 public class UserRegistrationRabbitConfig {
 
-    /**
-     * The primary queue where user registration messages land.
-     * Configured with a Dead Letter Exchange (DLX) to handle processing failures.
-     */
     @Bean
     public Queue userRegistrationQueue() {
-        return QueueBuilder.durable(RabbitNames.USER_REGISTRATION_QUEUE)
-                .withArgument("x-dead-letter-exchange", RabbitNames.USER_REGISTRATION_DEAD_LETTER_EXCHANGE)
-                .withArgument("x-dead-letter-routing-key", RabbitNames.USER_REGISTRATION_DEAD_LETTER_ROUTING_KEY)
+        return QueueBuilder.durable(RabbitNames.USER_REG_QUEUE)
+                .withArgument("x-dead-letter-exchange", RabbitNames.USER_REG_DLX)
+                .withArgument("x-dead-letter-routing-key", RabbitNames.USER_REG_DL_RK)
                 .build();
     }
 
-    /**
-     * The "Hospital Queue" (DLQ). Messages that fail in the main queue
-     * are automatically routed here for manual inspection.
-     */
     @Bean
     public Queue userRegistrationDeadLetterQueue() {
-        return QueueBuilder.durable(RabbitNames.USER_REGISTRATION_DEAD_LETTER_QUEUE).build();
+        return QueueBuilder.durable(RabbitNames.USER_REG_DLQ).build();
     }
 
-    /**
-     * Binds the Main Queue to the Main Exchange using the specific Routing Key.
-     * This is the "Link" that ensures messages from Identity reach Portfolio.
-     */
     @Bean
-    public Binding userRegistrationBinding(Queue userRegistrationQueue,
-                                           DirectExchange userRegistrationExchange) {
+    public Binding userRegistrationBinding(Queue userRegistrationQueue, DirectExchange userRegistrationExchange) {
         return BindingBuilder.bind(userRegistrationQueue)
                 .to(userRegistrationExchange)
-                .with(RabbitNames.USER_REGISTRATION_ROUTING_KEY);
+                .with(RabbitNames.USER_REG_ROUTING_KEY);
     }
 
-    /**
-     * Binds the DLQ to the Dead Letter Exchange.
-     * When a message is "Dead Lettered", it uses the DL-Routing-Key to find this queue.
-     */
     @Bean
-    public Binding deadLetterBinding(Queue userRegistrationDeadLetterQueue,
-                                     DirectExchange userRegistrationDLX) {
+    public Binding userRegistrationDeadLetterBinding(Queue userRegistrationDeadLetterQueue, DirectExchange userRegistrationDLX) {
         return BindingBuilder.bind(userRegistrationDeadLetterQueue)
                 .to(userRegistrationDLX)
-                .with(RabbitNames.USER_REGISTRATION_DEAD_LETTER_ROUTING_KEY);
+                .with(RabbitNames.USER_REG_DL_RK);
     }
 }

@@ -66,11 +66,16 @@ public class AuthService {
         UserCredential credential = mapToEntity(request);
         userCredentialRepository.save(credential);
 
-        UserRegistrationEvent event = new UserRegistrationEvent(
+        String currentTraceId = (tracer.currentSpan() != null)
+                ? tracer.currentSpan().context().traceId()
+                : "internal-" + java.util.UUID.randomUUID();
+
+        UserRegistrationEvent event = UserRegistrationEvent.create(
                 credential.getUsername(),
                 credential.getEmail(),
                 credential.getName(),
-                credential.getRole().name()
+                credential.getRole().name(),
+                currentTraceId
         );
 
         // Atomic operation: user and outbox message committed together
@@ -78,6 +83,19 @@ public class AuthService {
 
         log.info("IDENTITY-SERVICE: Successfully registered user and saved outbox event: {}", credential.getUsername());
         return "User " + credential.getUsername() + " registered successfully.";
+    }
+
+    @Transactional
+    public void reverseUserRegistration(String username, String reason) {
+        log.warn("SAGA-COMPENSATION: Reversing registration for user: {}. Reason: {}", username, reason);
+
+        userCredentialRepository.findByUsername(username).ifPresentOrElse(
+                user -> {
+                    userCredentialRepository.delete(user);
+                    log.info("SAGA-COMPENSATION: Successfully removed credentials for user: {}", username);
+                },
+                () -> log.error("SAGA-COMPENSATION-ERROR: User {} not found for reversal", username)
+        );
     }
 
     public void validateToken(String token) {
@@ -117,18 +135,14 @@ public class AuthService {
     }
 
     private void persistOutboxMessage(String aggregateId, UserRegistrationEvent event) {
-        // Using the Builder pattern for a senior-level, readable implementation
         OutboxMessage outboxMessage = OutboxMessage.builder()
                 .aggregateId(aggregateId)
                 .payload(serializeToJson(event))
+                .traceId(event.traceId())
+                .spanId(tracer.currentSpan() != null ? tracer.currentSpan().context().spanId() : null)
                 .processed(false)
                 .retryCount(0)
                 .build();
-
-        if (Objects.nonNull(tracer.currentSpan())) {
-            outboxMessage.setSpanId(tracer.currentSpan().context().spanId());
-            outboxMessage.setTraceId(tracer.currentSpan().context().traceId());
-        }
 
         outboxRepository.save(outboxMessage);
     }

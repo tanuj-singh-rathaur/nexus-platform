@@ -49,6 +49,11 @@ public class ProfileService {
     public Profile createProfile(Profile profile) {
         String username = profile.getUsername().toLowerCase().trim();
 
+        // TEMPORARY: Force a Saga Failure for testing
+        if (profile.getUsername().equals("fail_test")) {
+            throw new RuntimeException("Simulated Database Failure for Saga Testing");
+        }
+
         return profileRepository.findByUsername(username)
                 .map(existing -> {
                     log.info("SaaS-INFO: Profile already exists for user: {}", username);

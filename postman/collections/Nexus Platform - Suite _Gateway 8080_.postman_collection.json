@@ -15,14 +15,31 @@
             {
               "listen": "test",
               "script": {
-                "type": "text/javascript",
+                "id": "d00bd44a-a95b-40b1-b349-e578cc1d491b",
                 "exec": [
-                  "const requestBody = JSON.parse(pm.request.body.raw);",
-                  "pm.environment.set('temp_username', requestBody.username);",
-                  "pm.environment.set('temp_password', requestBody.password);",
-                  "console.log('Credentials cached for login');"
+                  "const req = pm.request.body && pm.request.body.raw ? JSON.parse(pm.request.body.raw) : {};",
+                  "",
+                  "pm.environment.set(\"temp_username\", req.username);",
+                  "pm.environment.set(\"temp_password\", req.password);",
+                  "",
+                  "console.log(\"Credentials cached for login:\", req.username);",
+                  ""
                 ],
-                "id": "d00bd44a-a95b-40b1-b349-e578cc1d491b"
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "id": "0f75a75a-ff48-4acf-ad7d-e4621fe1b7b8",
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
               }
             }
           ],
@@ -37,16 +54,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Tanuj Singh Rathaur\",\n  \"username\": \"rathaur_{{$randomInt}}\",\n  \"email\": \"tanuj{{$randomInt}}@example.com\",\n  \"password\": \"pass123\"\n}"
+              "raw": "{\n  \"name\": \"Tanuj Singh Rathaur\",\n  \"username\": \"fail_test\",\n  \"email\": \"tanuj{{$randomInt}}@example.com\",\n  \"password\": \"pass123\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/identity/auth/register",
+              "raw": "{{base_url}}/auth/register",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "api",
-                "identity",
                 "auth",
                 "register"
               ]
@@ -60,7 +75,7 @@
             {
               "listen": "test",
               "script": {
-                "type": "text/javascript",
+                "id": "e684f1c5-cc9e-4064-9949-7355d149aab9",
                 "exec": [
                   "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
                   "const res = pm.response.json();",
@@ -73,7 +88,21 @@
                   "console.log('jwt_token:', pm.environment.get('jwt_token'));",
                   "console.log('current_username:', pm.environment.get('current_username'));"
                 ],
-                "id": "e684f1c5-cc9e-4064-9949-7355d149aab9"
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "id": "cce1c3da-8cb3-4979-96a5-1881778e48ea",
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
               }
             }
           ],
@@ -91,13 +120,11 @@
               "raw": "{\n  \"username\": \"{{temp_username}}\",\n  \"password\": \"{{temp_password}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/identity/auth/token",
+              "raw": "{{base_url}}/auth/token",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
-                "api",
-                "identity",
                 "auth",
                 "token"
               ]
@@ -148,7 +175,7 @@
               "raw": "{\n  \"title\": \"Senior Software Developer\",\n  \"aboutMe\": \"Building Nexus Platform\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}",
+              "raw": "{{base_url}}/api/portfolio/profiles/me",
               "host": [
                 "{{base_url}}"
               ],
@@ -156,7 +183,7 @@
                 "api",
                 "portfolio",
                 "profiles",
-                "{{current_username}}"
+                "me"
               ]
             }
           },
@@ -166,10 +193,20 @@
           "name": "Get my profile",
           "id": "6b7a25c5-9c23-4c89-9881-58bec79f8f9f",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}",
+              "raw": "{{base_url}}/api/portfolio/profiles/me",
               "host": [
                 "{{base_url}}"
               ],
@@ -177,7 +214,7 @@
                 "api",
                 "portfolio",
                 "profiles",
-                "{{current_username}}"
+                "me"
               ]
             }
           },
@@ -205,15 +242,14 @@
               "raw": "{\n  \"title\": \"Nexus\",\n  \"description\": \"MQ Project\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/projects",
+              "raw": "{{base_url}}/api/portfolio/content/projects",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "portfolio",
-                "profiles",
-                "{{current_username}}",
+                "content",
                 "projects"
               ]
             }
@@ -236,15 +272,14 @@
               "raw": "{\n  \"name\": \"Java\",\n  \"level\": \"Expert\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/skills",
+              "raw": "{{base_url}}/api/portfolio/content/skills",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "portfolio",
-                "profiles",
-                "{{current_username}}",
+                "content",
                 "skills"
               ]
             }
@@ -267,15 +302,14 @@
               "raw": "{\n  \"institution\": \"UPTU\",\n  \"degree\": \"MCA\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/education",
+              "raw": "{{base_url}}/api/portfolio/content/education",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "portfolio",
-                "profiles",
-                "{{current_username}}",
+                "content",
                 "education"
               ]
             }
@@ -298,15 +332,14 @@
               "raw": "{\n  \"company\": \"Tech Corp\",\n  \"role\": \"Dev\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/experience",
+              "raw": "{{base_url}}/api/portfolio/content/experience",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "portfolio",
-                "profiles",
-                "{{current_username}}",
+                "content",
                 "experience"
               ]
             }
@@ -329,15 +362,14 @@
               "raw": "{\n  \"name\": \"Spring Cert\",\n  \"issuingOrganization\": \"VMware\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/certifications",
+              "raw": "{{base_url}}/api/portfolio/content/certifications",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "portfolio",
-                "profiles",
-                "{{current_username}}",
+                "content",
                 "certifications"
               ]
             }

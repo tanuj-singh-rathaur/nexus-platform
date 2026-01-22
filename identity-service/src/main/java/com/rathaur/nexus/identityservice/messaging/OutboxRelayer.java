@@ -62,8 +62,8 @@ public class OutboxRelayer {
 
                 /* Publish to RabbitMQ using the common utility names */
                 rabbitTemplate.convertAndSend(
-                        RabbitNames.USER_REGISTRATION_EXCHANGE,
-                        RabbitNames.USER_REGISTRATION_ROUTING_KEY,
+                        RabbitNames.USER_REG_EXCHANGE,
+                        RabbitNames.USER_REG_ROUTING_KEY,
                         event,
                         m -> {
                             /* Propagate tracing context to maintain distributed observability */
@@ -88,6 +88,7 @@ public class OutboxRelayer {
                 /* * In a senior-level app, you might increment a 'retry_count' on the entity here
                  * to implement an 'Exponential Backoff' before sending it to a dead-letter table.
                  */
+
             }
         }
     }
