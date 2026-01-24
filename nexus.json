@@ -26,17 +26,15 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Tanuj Singh Rathaur\",\n  \"username\": \"rathaur_{{$randomInt}}\",\n  \"email\": \"tanuj{{$randomInt}}@example.com\",\n  \"password\": \"pass123\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/identity/auth/register",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "identity", "auth", "register" ]
+              "host": ["{{base_url}}"],
+              "path": ["api", "identity", "auth", "register"]
             }
           }
         },
@@ -64,17 +62,15 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"username\": \"{{temp_username}}\",\n  \"password\": \"{{temp_password}}\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/identity/auth/token",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "identity", "auth", "token" ]
+              "host": ["{{base_url}}"],
+              "path": ["api", "identity", "auth", "token"]
             }
           }
         }
@@ -90,8 +86,8 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}" ]
+              "host": ["{{base_url}}"],
+              "path": ["api", "portfolio", "profiles", "{{current_username}}"]
             }
           }
         },
@@ -99,17 +95,15 @@
           "name": "Update Profile (Patch)",
           "request": {
             "method": "PATCH",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Senior Software Developer\",\n  \"aboutMe\": \"Building Nexus Platform\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}" ]
+              "host": ["{{base_url}}"],
+              "path": ["api", "portfolio", "profiles", "{{current_username}}"]
             }
           }
         }
@@ -122,17 +116,21 @@
           "name": "Add Project",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Nexus\",\n  \"description\": \"MQ Project\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/projects",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}", "projects" ]
+              "host": ["{{base_url}}"],
+              "path": [
+                "api",
+                "portfolio",
+                "profiles",
+                "{{current_username}}",
+                "projects"
+              ]
             }
           }
         },
@@ -140,17 +138,21 @@
           "name": "Add Skill",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Java\",\n  \"level\": \"Expert\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/skills",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}", "skills" ]
+              "host": ["{{base_url}}"],
+              "path": [
+                "api",
+                "portfolio",
+                "profiles",
+                "{{current_username}}",
+                "skills"
+              ]
             }
           }
         },
@@ -158,17 +160,21 @@
           "name": "Add Education",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"institution\": \"UPTU\",\n  \"degree\": \"MCA\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/education",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}", "education" ]
+              "host": ["{{base_url}}"],
+              "path": [
+                "api",
+                "portfolio",
+                "profiles",
+                "{{current_username}}",
+                "education"
+              ]
             }
           }
         },
@@ -176,17 +182,21 @@
           "name": "Add Experience",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"company\": \"Tech Corp\",\n  \"role\": \"Dev\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/experience",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}", "experience" ]
+              "host": ["{{base_url}}"],
+              "path": [
+                "api",
+                "portfolio",
+                "profiles",
+                "{{current_username}}",
+                "experience"
+              ]
             }
           }
         },
@@ -194,17 +204,21 @@
           "name": "Add Certification",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Spring Cert\",\n  \"issuingOrganization\": \"VMware\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/certifications",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "profiles", "{{current_username}}", "certifications" ]
+              "host": ["{{base_url}}"],
+              "path": [
+                "api",
+                "portfolio",
+                "profiles",
+                "{{current_username}}",
+                "certifications"
+              ]
             }
           }
         }
@@ -219,8 +233,8 @@
             "method": "GET",
             "url": {
               "raw": "{{base_url}}/api/identity/actuator/health",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "identity", "actuator", "health" ]
+              "host": ["{{base_url}}"],
+              "path": ["api", "identity", "actuator", "health"]
             }
           }
         },
@@ -230,8 +244,8 @@
             "method": "GET",
             "url": {
               "raw": "{{base_url}}/api/portfolio/actuator/health",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "actuator", "health" ]
+              "host": ["{{base_url}}"],
+              "path": ["api", "portfolio", "actuator", "health"]
             }
           }
         },
@@ -241,8 +255,8 @@
             "method": "GET",
             "url": {
               "raw": "{{base_url}}/actuator/gateway/routes",
-              "host": [ "{{base_url}}" ],
-              "path": [ "actuator", "gateway", "routes" ]
+              "host": ["{{base_url}}"],
+              "path": ["actuator", "gateway", "routes"]
             }
           }
         },
@@ -252,21 +266,86 @@
             "method": "GET",
             "url": {
               "raw": "{{base_url}}/api/portfolio/v3/api-docs",
-              "host": [ "{{base_url}}" ],
-              "path": [ "api", "portfolio", "v3", "api-docs" ]
+              "host": ["{{base_url}}"],
+              "path": ["api", "portfolio", "v3", "api-docs"]
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "5. stats-service",
+      "item": [
+        {
+          "name": "1. Trigger Manual Sync",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stats/sync/{{username}}?github={{githubHandle}}&leetcode={{leetcodeHandle}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "stats", "sync", "{{username}}"],
+              "query": [
+                { "key": "github", "value": "{{githubHandle}}" },
+                { "key": "leetcode", "value": "{{leetcodeHandle}}" }
+              ]
+            },
+            "description": "Triggers the background WebFlux sync for GitHub and LeetCode. Returns 202 Accepted."
+          },
+          "response": []
+        },
+        {
+          "name": "2. Get User Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stats/{{username}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "stats", "{{username}}"]
+            },
+            "description": "Retrieves the master record, including the calculated Nexus Score and JSONB summaries."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Get Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stats/leaderboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "stats", "leaderboard"]
+            },
+            "description": "Fetches the top 10 users ranked by their Nexus Score."
+          },
+          "response": []
+        }
+      ],
+      "variable": [
+        {
+          "key": "baseUrl",
+          "value": "http://localhost:8083",
+          "type": "string"
+        },
+        { "key": "username", "value": "tanuj", "type": "string" },
+        {
+          "key": "githubHandle",
+          "value": "your-github-username",
+          "type": "string"
+        },
+        {
+          "key": "leetcodeHandle",
+          "value": "your-leetcode-username",
+          "type": "string"
         }
       ]
     }
   ],
   "auth": {
     "type": "bearer",
-    "bearer": [
-      { "key": "token", "value": "{{jwt_token}}", "type": "string" }
-    ]
+    "bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
   },
-  "variable": [
-    { "key": "base_url", "value": "http://localhost:8080" }
-  ]
+  "variable": [{ "key": "base_url", "value": "http://localhost:8080" }]
 }

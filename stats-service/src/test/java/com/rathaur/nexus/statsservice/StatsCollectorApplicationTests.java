@@ -1,4 +1,4 @@
-package com.rathaur.nexus.statscollector;
+package com.rathaur.nexus.statsservice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

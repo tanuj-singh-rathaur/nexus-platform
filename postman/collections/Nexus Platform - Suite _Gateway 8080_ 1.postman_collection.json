@@ -1,6 +1,6 @@
 {
   "info": {
-    "_postman_id": "06585a4d-9346-4778-b815-9fd350813d1e",
+    "_postman_id": "ab109397-775a-4efb-af4b-f52f27f8cf5e",
     "name": "Nexus Platform - Suite (Gateway 8080)",
     "description": "Register -> Login -> Portfolio calls. Uses env vars: base_url, jwt_token, current_username, temp_username, temp_password",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -15,35 +15,18 @@
             {
               "listen": "test",
               "script": {
-                "id": "d00bd44a-a95b-40b1-b349-e578cc1d491b",
-                "exec": [
-                  "const req = pm.request.body && pm.request.body.raw ? JSON.parse(pm.request.body.raw) : {};",
-                  "",
-                  "pm.environment.set(\"temp_username\", req.username);",
-                  "pm.environment.set(\"temp_password\", req.password);",
-                  "",
-                  "console.log(\"Credentials cached for login:\", req.username);",
-                  ""
-                ],
                 "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
-              "listen": "prerequest",
-              "script": {
-                "id": "0f75a75a-ff48-4acf-ad7d-e4621fe1b7b8",
                 "exec": [
-                  ""
+                  "const requestBody = JSON.parse(pm.request.body.raw);",
+                  "pm.environment.set('temp_username', requestBody.username);",
+                  "pm.environment.set('temp_password', requestBody.password);",
+                  "console.log('Credentials cached for login');"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "id": "48a447f6-9102-4192-a418-34fc173a0ce1"
               }
             }
           ],
-          "id": "a9d043c1-5f71-4367-941e-dbca9e5b1c39",
+          "id": "d7bf73ea-4093-40ee-ae1d-3bbc004d0b66",
           "request": {
             "method": "POST",
             "header": [
@@ -54,14 +37,16 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Tanuj Singh Rathaur\",\n  \"username\": \"fail_test\",\n  \"email\": \"tanuj{{$randomInt}}@example.com\",\n  \"password\": \"pass123\"\n}"
+              "raw": "{\n  \"name\": \"Tanuj Singh Rathaur\",\n  \"username\": \"rathaur_{{$randomInt}}\",\n  \"email\": \"tanuj{{$randomInt}}@example.com\",\n  \"password\": \"pass123\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/auth/register",
+              "raw": "{{base_url}}/api/identity/auth/register",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
+                "identity",
                 "auth",
                 "register"
               ]
@@ -75,7 +60,7 @@
             {
               "listen": "test",
               "script": {
-                "id": "e684f1c5-cc9e-4064-9949-7355d149aab9",
+                "type": "text/javascript",
                 "exec": [
                   "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
                   "const res = pm.response.json();",
@@ -88,25 +73,11 @@
                   "console.log('jwt_token:', pm.environment.get('jwt_token'));",
                   "console.log('current_username:', pm.environment.get('current_username'));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
-              "listen": "prerequest",
-              "script": {
-                "id": "cce1c3da-8cb3-4979-96a5-1881778e48ea",
-                "exec": [
-                  ""
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "id": "b487ed38-634c-480e-938e-09008200bebb"
               }
             }
           ],
-          "id": "8c09c6e7-68e4-4b20-87a5-f9ef690714c9",
+          "id": "a87248ab-3adc-4772-b908-5d3cb4e1b902",
           "request": {
             "method": "POST",
             "header": [
@@ -120,11 +91,13 @@
               "raw": "{\n  \"username\": \"{{temp_username}}\",\n  \"password\": \"{{temp_password}}\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/auth/token",
+              "raw": "{{base_url}}/api/identity/auth/token",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
+                "api",
+                "identity",
                 "auth",
                 "token"
               ]
@@ -133,14 +106,14 @@
           "response": []
         }
       ],
-      "id": "827b05a2-8ef6-48f1-8bb2-15427ca888ed"
+      "id": "eafd1bb8-486d-4f92-b365-19f655236968"
     },
     {
       "name": "2. Portfolio Core",
       "item": [
         {
           "name": "Get Full Profile",
-          "id": "a6c518a1-8658-4974-ab28-708009f10a85",
+          "id": "a08fda35-dede-4f99-9a6a-32bd81b9fa43",
           "request": {
             "method": "GET",
             "header": [],
@@ -161,7 +134,7 @@
         },
         {
           "name": "Update Profile (Patch)",
-          "id": "b326e656-6087-4e23-8025-d0a55b19c96a",
+          "id": "e22b4362-c316-433d-83f3-12b9168af019",
           "request": {
             "method": "PATCH",
             "header": [
@@ -175,7 +148,7 @@
               "raw": "{\n  \"title\": \"Senior Software Developer\",\n  \"aboutMe\": \"Building Nexus Platform\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/portfolio/profiles/me",
+              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}",
               "host": [
                 "{{base_url}}"
               ],
@@ -183,52 +156,21 @@
                 "api",
                 "portfolio",
                 "profiles",
-                "me"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get my profile",
-          "id": "6b7a25c5-9c23-4c89-9881-58bec79f8f9f",
-          "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{jwt_token}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/api/portfolio/profiles/me",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "api",
-                "portfolio",
-                "profiles",
-                "me"
+                "{{current_username}}"
               ]
             }
           },
           "response": []
         }
       ],
-      "id": "8d14b616-4f77-41c9-958f-17fe112d72a7"
+      "id": "0b2da56c-28ae-4827-93c7-662ac1be2e24"
     },
     {
       "name": "3. Portfolio Content (Nested)",
       "item": [
         {
           "name": "Add Project",
-          "id": "fb776fbc-ce3d-45f9-a1cf-3f20d1aaf972",
+          "id": "cb4861aa-5719-44d0-b5a0-699aada68909",
           "request": {
             "method": "POST",
             "header": [
@@ -242,14 +184,15 @@
               "raw": "{\n  \"title\": \"Nexus\",\n  \"description\": \"MQ Project\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/portfolio/content/projects",
+              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/projects",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "portfolio",
-                "content",
+                "profiles",
+                "{{current_username}}",
                 "projects"
               ]
             }
@@ -258,7 +201,7 @@
         },
         {
           "name": "Add Skill",
-          "id": "68c70e6e-98c7-46a6-9dc4-a6081f780687",
+          "id": "ecb3c530-dc25-46ee-a7c5-7727d665d79a",
           "request": {
             "method": "POST",
             "header": [
@@ -272,14 +215,15 @@
               "raw": "{\n  \"name\": \"Java\",\n  \"level\": \"Expert\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/portfolio/content/skills",
+              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/skills",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "portfolio",
-                "content",
+                "profiles",
+                "{{current_username}}",
                 "skills"
               ]
             }
@@ -288,7 +232,7 @@
         },
         {
           "name": "Add Education",
-          "id": "d83c8090-a2d8-4251-b1b3-ed4174cd39cb",
+          "id": "9c8f1d78-3faa-4df0-b3e4-645dac6fc34f",
           "request": {
             "method": "POST",
             "header": [
@@ -302,14 +246,15 @@
               "raw": "{\n  \"institution\": \"UPTU\",\n  \"degree\": \"MCA\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/portfolio/content/education",
+              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/education",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "portfolio",
-                "content",
+                "profiles",
+                "{{current_username}}",
                 "education"
               ]
             }
@@ -318,7 +263,7 @@
         },
         {
           "name": "Add Experience",
-          "id": "9bd5ad1e-08bf-4e47-949a-16126160c7e5",
+          "id": "c54c0a45-181f-4fb9-8fb2-5ff93a4d8851",
           "request": {
             "method": "POST",
             "header": [
@@ -332,14 +277,15 @@
               "raw": "{\n  \"company\": \"Tech Corp\",\n  \"role\": \"Dev\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/portfolio/content/experience",
+              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/experience",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "portfolio",
-                "content",
+                "profiles",
+                "{{current_username}}",
                 "experience"
               ]
             }
@@ -348,7 +294,7 @@
         },
         {
           "name": "Add Certification",
-          "id": "0fe410da-045f-44d1-b4d8-677858d9d7d1",
+          "id": "73ba6b6d-7ca8-4205-ab46-bc02ce57764b",
           "request": {
             "method": "POST",
             "header": [
@@ -362,14 +308,15 @@
               "raw": "{\n  \"name\": \"Spring Cert\",\n  \"issuingOrganization\": \"VMware\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/portfolio/content/certifications",
+              "raw": "{{base_url}}/api/portfolio/profiles/{{current_username}}/certifications",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "api",
                 "portfolio",
-                "content",
+                "profiles",
+                "{{current_username}}",
                 "certifications"
               ]
             }
@@ -377,14 +324,14 @@
           "response": []
         }
       ],
-      "id": "9494dad4-4a6e-44e0-8edb-4c7162e9295b"
+      "id": "5287322e-a004-41e3-99a0-52263b8b311c"
     },
     {
       "name": "4. Infrastructure & Monitoring",
       "item": [
         {
           "name": "Identity Health",
-          "id": "8bb09e15-ac7c-4124-a833-e7bdc927e6b1",
+          "id": "71fb625d-4f17-43d1-a24c-6547b524a909",
           "request": {
             "method": "GET",
             "header": [],
@@ -405,7 +352,7 @@
         },
         {
           "name": "Portfolio Health",
-          "id": "12bbc756-04ff-4752-b61c-377800df5968",
+          "id": "4390f8a4-a8cd-4652-8210-c11e7ee74987",
           "request": {
             "method": "GET",
             "header": [],
@@ -426,7 +373,7 @@
         },
         {
           "name": "Gateway Routes",
-          "id": "e5c03202-ea85-408b-b5c3-c5974bbe7743",
+          "id": "969a3df3-d364-4fd8-8e98-b1ff3be90a13",
           "request": {
             "method": "GET",
             "header": [],
@@ -446,7 +393,7 @@
         },
         {
           "name": "Portfolio Swagger Docs",
-          "id": "21572dc8-2b2e-442b-8efc-b6d8af00aa26",
+          "id": "51053444-ddb8-46d9-bef6-54ed13176487",
           "request": {
             "method": "GET",
             "header": [],
@@ -466,81 +413,90 @@
           "response": []
         }
       ],
-      "id": "b6eddcc7-e758-4ed7-a51e-f32ebfffc910"
+      "id": "dab41bf5-6738-48f0-9f1d-7446a2cdbe2a"
     },
     {
-      "name": "graphQl",
+      "name": "5. stats-service",
       "item": [
         {
-          "name": "https://api.github.com/graphql",
-          "id": "e337f9e8-4f19-45a7-bb1b-64d36ada42ea",
+          "name": "1. Trigger Manual Sync",
+          "id": "47d62887-d438-4a8a-92cc-48337e1b98d5",
           "request": {
-            "auth": {
-              "type": "bearer",
-              "bearer": [
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stats/sync/{{username}}?github={{githubHandle}}&leetcode={{leetcodeHandle}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stats",
+                "sync",
+                "{{username}}"
+              ],
+              "query": [
                 {
-                  "key": "token",
-                  "value": "{{github_graphQl}}",
-                  "type": "string"
+                  "key": "github",
+                  "value": "{{githubHandle}}"
+                },
+                {
+                  "key": "leetcode",
+                  "value": "{{leetcodeHandle}}"
                 }
               ]
             },
-            "method": "POST",
+            "description": "Triggers the background WebFlux sync for GitHub and LeetCode. Returns 202 Accepted."
+          },
+          "response": []
+        },
+        {
+          "name": "2. Get User Stats",
+          "id": "8178be25-1106-424a-bf85-676b6383564e",
+          "request": {
+            "method": "GET",
             "header": [],
-            "body": {
-              "mode": "graphql"
-            },
             "url": {
-              "raw": "https://api.github.com/graphql",
-              "protocol": "https",
+              "raw": "{{baseUrl}}/api/v1/stats/{{username}}",
               "host": [
-                "api",
-                "github",
-                "com"
+                "{{baseUrl}}"
               ],
               "path": [
-                "graphql"
+                "api",
+                "v1",
+                "stats",
+                "{{username}}"
               ]
-            }
+            },
+            "description": "Retrieves the master record, including the calculated Nexus Score and JSONB summaries."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Get Leaderboard",
+          "id": "640b8c13-532b-4834-9250-a7e58e7be8fc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stats/leaderboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stats",
+                "leaderboard"
+              ]
+            },
+            "description": "Fetches the top 10 users ranked by their Nexus Score."
           },
           "response": []
         }
       ],
-      "id": "7597b87d-f38e-4631-8c21-29c23ec46834"
-    },
-    {
-      "name": "https://api.github.com/graphql",
-      "id": "e337f9e8-4f19-45a7-bb1b-64d36ada42ea",
-      "request": {
-        "auth": {
-          "type": "bearer",
-          "bearer": [
-            {
-              "key": "token",
-              "value": "{{github_graphQl}}",
-              "type": "string"
-            }
-          ]
-        },
-        "method": "POST",
-        "header": [],
-        "body": {
-          "mode": "graphql"
-        },
-        "url": {
-          "raw": "https://api.github.com/graphql",
-          "protocol": "https",
-          "host": [
-            "api",
-            "github",
-            "com"
-          ],
-          "path": [
-            "graphql"
-          ]
-        }
-      },
-      "response": []
+      "id": "a9b7e8e9-7cfa-44b2-ba02-9970fe991a5f"
     }
   ],
   "auth": {
@@ -555,7 +511,7 @@
   },
   "variable": [
     {
-      "id": "8f4604d0-9e12-4c64-9e12-114966953a68",
+      "id": "5b2542f2-f4b1-4a1b-81d4-08e5c60060fb",
       "key": "base_url",
       "value": "http://localhost:8080"
     }
