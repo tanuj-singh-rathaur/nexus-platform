@@ -2,6 +2,8 @@ package com.rathaur.nexus.identityservice.config;
 
 import com.rathaur.nexus.common.security.JwtAuthenticationFilter;
 import com.rathaur.nexus.identityservice.repository.UserCredentialRepository;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;

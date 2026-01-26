@@ -1,10 +1,10 @@
 package com.rathaur.nexus.portfolioservice.service;
 
 import com.rathaur.nexus.portfolioservice.entity.*;
-import com.rathaur.nexus.portfolioservice.exception.ProfileNotFoundException;
+import com.rathaur.nexus.portfolioservice.exception.PortfolioDomainExceptions.*;
 import com.rathaur.nexus.portfolioservice.repository.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,15 +12,15 @@ import java.util.ArrayList;
 
 /**
  * Service orchestrating Portfolio Profile operations.
- * Designed for stateless operation where identity is derived from JWT.
+ * Implements strict ownership checks to prevent IDOR vulnerabilities.
  * * @author Tanuj Singh Rathaur
- * @date 1/21/2026
+ * @date 01/26/2026
  */
+@Slf4j
 @Service
+@RequiredArgsConstructor
 @Transactional
 public class ProfileService {
-
-    private static final Logger log = LoggerFactory.getLogger(ProfileService.class);
 
     private final ProfileRepository profileRepository;
     private final ProjectRepository projectRepository;
@@ -29,38 +29,18 @@ public class ProfileService {
     private final ExperienceRepository experienceRepository;
     private final CertificationRepository certificationRepository;
 
-    public ProfileService(ProfileRepository profileRepository,
-                          ProjectRepository projectRepository,
-                          SkillRepository skillRepository,
-                          EducationRepository educationRepository,
-                          ExperienceRepository experienceRepository,
-                          CertificationRepository certificationRepository) {
-        this.profileRepository = profileRepository;
-        this.projectRepository = projectRepository;
-        this.skillRepository = skillRepository;
-        this.educationRepository = educationRepository;
-        this.experienceRepository = experienceRepository;
-        this.certificationRepository = certificationRepository;
-    }
+    // --- PROFILE CORE LOGIC ---
 
-    /**
-     * Idempotent profile creation. Used by RabbitMQ listeners.
-     */
     public Profile createProfile(Profile profile) {
         String username = profile.getUsername().toLowerCase().trim();
 
-        // TEMPORARY: Force a Saga Failure for testing
-        if (profile.getUsername().equals("fail_test")) {
-            throw new RuntimeException("Simulated Database Failure for Saga Testing");
+        if ("fail_test".equals(username)) {
+            throw new PortfolioDataException("Simulated Saga Failure for user: " + username);
         }
 
         return profileRepository.findByUsername(username)
-                .map(existing -> {
-                    log.info("SaaS-INFO: Profile already exists for user: {}", username);
-                    return existing;
-                })
                 .orElseGet(() -> {
-                    log.info("SaaS-INFO: Initializing new profile for user: {}", username);
+                    log.info("NEXUS-PORTFOLIO: Creating new profile for: {}", username);
                     profile.setUsername(username);
                     initializeCollections(profile);
                     return profileRepository.save(profile);
@@ -69,17 +49,12 @@ public class ProfileService {
 
     public Profile getProfileByUsername(String username) {
         return profileRepository.findByUsername(username.toLowerCase())
-                .orElseThrow(() -> new ProfileNotFoundException("Profile not found for username: " + username));
+                .orElseThrow(() -> new ProfileNotFoundException("Profile not found for: " + username));
     }
 
-    /**
-     * Updates profile data.
-     * Guarded to only update allowed fields.
-     */
     public Profile updateProfile(String username, Profile incoming) {
         Profile existing = getProfileByUsername(username);
 
-        // Manual mapping protects immutable fields like 'id' and 'username'
         if (incoming.getFullName() != null) existing.setFullName(incoming.getFullName());
         if (incoming.getEmail() != null) existing.setEmail(incoming.getEmail());
         if (incoming.getTitle() != null) existing.setTitle(incoming.getTitle());
@@ -88,44 +63,78 @@ public class ProfileService {
         return profileRepository.save(existing);
     }
 
-    public void deleteProfile(String username) {
-        Profile profile = getProfileByUsername(username);
-        profileRepository.delete(profile);
-    }
-
-    /* --- Child Entity Operations --- */
+    // --- PROJECT MANAGEMENT (With Ownership Logic) ---
 
     public Project addProject(String username, Project project) {
         Profile profile = getProfileByUsername(username);
-        project.setProfile(profile); // Enforce Relationship
+        project.setProfile(profile);
         return projectRepository.save(project);
     }
 
+    public void deleteProject(String username, Long projectId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ProfileNotFoundException("Project not found with ID: " + projectId));
+
+        // SECURITY CHECK: Verify that the project belongs to the user in the JWT
+        validateOwnership(username, project.getProfile().getUsername());
+
+        projectRepository.delete(project);
+        log.info("NEXUS-PORTFOLIO: Project {} deleted by user {}", projectId, username);
+    }
+
+    // --- SKILL MANAGEMENT ---
+
     public Skill addSkill(String username, Skill skill) {
         Profile profile = getProfileByUsername(username);
+
+        boolean duplicate = profile.getSkills().stream()
+                .anyMatch(s -> s.getSkillName().equalsIgnoreCase(skill.getSkillName()));
+
+        if (duplicate) {
+            throw new PortfolioDataException("Skill '" + skill.getSkillName() + "' already exists.");
+        }
+
         skill.setProfile(profile);
         return skillRepository.save(skill);
     }
 
+    public void removeSkill(String username, Long skillId) {
+        Skill skill = skillRepository.findById(skillId)
+                .orElseThrow(() -> new ProfileNotFoundException("Skill not found with ID: " + skillId));
+
+        validateOwnership(username, skill.getProfile().getUsername());
+        skillRepository.delete(skill);
+    }
+
+    // --- EDUCATION, EXPERIENCE, & CERTS (Standard Flow) ---
+
     public Education addEducation(String username, Education education) {
-        Profile profile = getProfileByUsername(username);
-        education.setProfile(profile);
+        education.setProfile(getProfileByUsername(username));
         return educationRepository.save(education);
     }
 
     public Experience addExperience(String username, Experience experience) {
-        Profile profile = getProfileByUsername(username);
-        experience.setProfile(profile);
+        experience.setProfile(getProfileByUsername(username));
         return experienceRepository.save(experience);
     }
 
-    public Certification addCertification(String username, Certification certification) {
-        Profile profile = getProfileByUsername(username);
-        certification.setProfile(profile);
-        return certificationRepository.save(certification);
+    public Certification addCertification(String username, Certification cert) {
+        cert.setProfile(getProfileByUsername(username));
+        return certificationRepository.save(cert);
     }
 
-    /* Helper to ensure no null pointer exceptions on new profiles */
+    // --- INTERNAL HELPERS ---
+
+    /**
+     * The Security Shield: Ensures that 'requester' is the 'owner' of the target resource.
+     */
+    private void validateOwnership(String requester, String owner) {
+        if (!requester.equalsIgnoreCase(owner)) {
+            log.warn("SECURITY-BREACH: User {} attempted to modify resource belonging to {}", requester, owner);
+            throw new ResourceOwnershipException("Access Denied: You do not own this resource.");
+        }
+    }
+
     private void initializeCollections(Profile profile) {
         profile.setProjects(new ArrayList<>());
         profile.setEducation(new ArrayList<>());

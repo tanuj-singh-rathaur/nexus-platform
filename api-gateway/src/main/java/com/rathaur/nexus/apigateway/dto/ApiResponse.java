@@ -1,7 +1,11 @@
-package com.rathaur.nexus.common.dto;
+package com.rathaur.nexus.apigateway.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.Instant;
 
 @Data

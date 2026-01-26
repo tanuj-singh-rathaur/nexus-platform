@@ -54,7 +54,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Tanuj Singh Rathaur\",\n  \"username\": \"fail_test\",\n  \"email\": \"tanuj{{$randomInt}}@example.com\",\n  \"password\": \"pass123\"\n}"
+              "raw": "{\n  \"name\": \"Tanuj Singh Rathaur\",\n  \"username\": \"tanuj{{$randomInt}}\",\n  \"email\": \"tanuj{{$randomInt}}@example.com\",\n  \"password\": \"pass123\"\n}"
             },
             "url": {
               "raw": "{{base_url}}/auth/register",
@@ -507,6 +507,108 @@
         }
       ],
       "id": "7597b87d-f38e-4631-8c21-29c23ec46834"
+    },
+    {
+      "name": "5. stats-service",
+      "item": [
+        {
+          "name": "1. Trigger Manual Sync",
+          "id": "47d62887-d438-4a8a-92cc-48337e1b98d5",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text",
+                "uuid": "57a3d56b-464b-4086-91a8-5b8871471851"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8082/",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8082",
+              "path": [
+                ""
+              ]
+            },
+            "description": "Triggers the background WebFlux sync for GitHub and LeetCode. Returns 202 Accepted."
+          },
+          "response": []
+        },
+        {
+          "name": "2. Get User Stats",
+          "id": "8178be25-1106-424a-bf85-676b6383564e",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "localhost:8082/api/v1/stats/me",
+              "host": [
+                "localhost"
+              ],
+              "port": "8082",
+              "path": [
+                "api",
+                "v1",
+                "stats",
+                "me"
+              ]
+            },
+            "description": "Retrieves the master record, including the calculated Nexus Score and JSONB summaries."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Get Leaderboard",
+          "id": "640b8c13-532b-4834-9250-a7e58e7be8fc",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/stats/leaderboard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stats",
+                "leaderboard"
+              ]
+            },
+            "description": "Fetches the top 10 users ranked by their Nexus Score."
+          },
+          "response": []
+        }
+      ],
+      "id": "a9b7e8e9-7cfa-44b2-ba02-9970fe991a5f"
     },
     {
       "name": "https://api.github.com/graphql",

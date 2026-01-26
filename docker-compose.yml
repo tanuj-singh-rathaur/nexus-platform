@@ -116,7 +116,7 @@ services:
       <<: *common-env
       SERVER_PORT: 9898
       SPRING_APPLICATION_NAME: identity-service
-      DB_NAME: nexus_users
+      DB_NAME: nexus_identity
     depends_on:
       postgres:
         condition: service_healthy
@@ -139,6 +139,29 @@ services:
       SERVER_PORT: 8081
       SPRING_APPLICATION_NAME: portfolio-service
       DB_NAME: nexus_portfolio
+    depends_on:
+      postgres:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy # Wait for MQ before consuming events
+    networks:
+      - nexus-net
+
+  # 7. STATS SERVICE
+  stats-service:
+    build: ./stats-service
+    container_name: stats-service
+    hostname: stats-service
+    ports:
+      - "8082:8082"
+    environment:
+      <<: *common-env
+      SERVER_PORT: 8082
+      SPRING_APPLICATION_NAME: stats-service
+      DB_NAME: nexus_stats
+      
     depends_on:
       postgres:
         condition: service_healthy

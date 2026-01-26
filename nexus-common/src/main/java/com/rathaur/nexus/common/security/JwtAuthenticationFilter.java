@@ -2,31 +2,49 @@ package com.rathaur.nexus.common.security;
 
 import com.rathaur.nexus.common.utils.SecurityConstants;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.web.servlet.HandlerExceptionResolver;
 
 import java.io.IOException;
 import java.util.List;
 
-/**
- * @author Tanuj Singh Rathaur
- * @date 1/17/2026
- */
+@Slf4j
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
+    private final HandlerExceptionResolver resolver;
 
-    public JwtAuthenticationFilter(JwtUtils jwtUtils) {
+    public JwtAuthenticationFilter(JwtUtils jwtUtils,
+                                   @Qualifier("handlerExceptionResolver") HandlerExceptionResolver resolver) {
         this.jwtUtils = jwtUtils;
+        this.resolver = resolver;
+    }
+
+    /**
+     * SUCCESSFUL OVERRIDE: Note the specific Jakarta HttpServletRequest.
+     */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        String path = request.getServletPath();
+        return path.startsWith("/auth/register") ||
+                path.startsWith("/auth/token") ||
+                path.startsWith("/auth/validate") ||
+                path.startsWith("/v3/api-docs") ||
+                path.startsWith("/swagger-ui");
     }
 
     @Override
@@ -36,6 +54,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader(SecurityConstants.AUTH_HEADER);
 
+        // If no token or not a bearer token, just continue the chain
         if (authHeader == null || !authHeader.startsWith(SecurityConstants.BEARER)) {
             filterChain.doFilter(request, response);
             return;
@@ -44,11 +63,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         final String token = authHeader.substring(SecurityConstants.BEARER.length());
 
         try {
-            /* 1. Validate and Parse Claims */
             Claims claims = jwtUtils.parseAndValidate(token);
-
-            /* 2. SaaS Best Practice: Ensure this is an ACCESS token, not a REFRESH token */
             String tokenType = (String) claims.get(SecurityConstants.CLAIM_TOKEN_TYPE);
+
             if (!SecurityConstants.TOKEN_TYPE_ACCESS.equals(tokenType)) {
                 filterChain.doFilter(request, response);
                 return;
@@ -56,9 +73,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String username = claims.getSubject();
 
-            /* 3. Authenticate if not already authenticated in this thread */
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-
                 @SuppressWarnings("unchecked")
                 List<String> roles = (List<String>) claims.get(SecurityConstants.CLAIM_ROLES);
 
@@ -66,20 +81,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         .map(SimpleGrantedAuthority::new)
                         .toList();
 
-                /* Use a proper Authentication object with authorities */
                 var authToken = new UsernamePasswordAuthenticationToken(username, null, authorities);
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
-        } catch (Exception e) {
-            /* Production Tip: In a SaaS, you might want to clear the context
-               if a malformed token is provided.
-            */
-            SecurityContextHolder.clearContext();
-            logger.error("Could not set user authentication in security context", e);
-        }
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+
+        } catch (ExpiredJwtException | SignatureException | io.jsonwebtoken.MalformedJwtException e) {
+            log.error("NEXUS-SECURITY: JWT validation failed: {}", e.getMessage());
+            // This sends it back to your @RestControllerAdvice
+            resolver.resolveException(request, response, null, e);
+        } catch (Exception e) {
+            log.error("NEXUS-SECURITY: Unexpected filter error", e);
+            resolver.resolveException(request, response, null, e);
+        }
     }
 }

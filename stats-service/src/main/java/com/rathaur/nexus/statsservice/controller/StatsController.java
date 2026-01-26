@@ -1,71 +1,87 @@
 package com.rathaur.nexus.statsservice.controller;
 
-
 import com.rathaur.nexus.common.dto.ApiResponse;
 import com.rathaur.nexus.statsservice.entity.UserStats;
 import com.rathaur.nexus.statsservice.repository.UserStatsRepository;
 import com.rathaur.nexus.statsservice.service.StatsSyncService;
+import io.micrometer.observation.annotation.Observed;
+import io.micrometer.tracing.Tracer;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
- * Stats Controller using Nexus Standard ApiResponse.
- * @author Tanuj Singh Rathaur
+ * Controller focusing on the "Service-to-Service" logic for the Nexus Platform.
  */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/stats")
 @RequiredArgsConstructor
+@Observed(name = "stats.controller")
 public class StatsController {
 
     private final StatsSyncService statsSyncService;
     private final UserStatsRepository userStatsRepository;
+    private final Tracer tracer;
 
     /**
-     * TRIGGER: Manually start a sync.
-     * Returns 202 Accepted because the work happens via WebFlux in the background.
+     * SECURE SYNC: Syncs ONLY the logged-in user.
+     * No username in URL - pulled from JWT 'sub' (Authentication.getName())
      */
-    @PostMapping("/sync/{username}")
-    public ResponseEntity<ApiResponse<String>> triggerSync(
-            @PathVariable String username,
+    @PostMapping("/sync")
+    @PreAuthorize("hasAnyAuthority('ROLE_USER', 'ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<String>> syncMe(
+            Authentication auth,
             @RequestParam(required = false) String github,
             @RequestParam(required = false) String leetcode) {
 
-        String traceId = UUID.randomUUID().toString();
-        log.info("[{}] Manual sync triggered for: {}", traceId, username);
+        String currentUsername = auth.getName();
+        log.info("Secure sync started for user: {}", currentUsername);
 
-        statsSyncService.fullStatsSync(username, github, leetcode);
+        // Delegate to service
+        statsSyncService.fullStatsSync(currentUsername, github, leetcode);
 
         return ResponseEntity.accepted().body(
-                ApiResponse.ok("Synchronization started for " + username, null, traceId)
+                ApiResponse.ok("Sync initiated for " + currentUsername, null, getTraceId())
         );
     }
 
     /**
-     * QUERY: Get user statistics.
+     * ME DATA: Returns the stats for the currently authenticated user.
      */
-    @GetMapping("/{username}")
-    public ResponseEntity<ApiResponse<UserStats>> getUserStats(@PathVariable String username) {
-        String traceId = UUID.randomUUID().toString();
+    @GetMapping("/me")
+    @PreAuthorize("hasAnyAuthority('ROLE_USER', 'ROLE_ADMIN')")
+    public ResponseEntity<ApiResponse<UserStats>> getMyStats(Authentication auth) {
+        UserStats stats = userStatsRepository.findByUsername(auth.getName())
+                .orElseThrow(() -> new EntityNotFoundException("Stats record not found for user: " + auth.getName()));
 
-        return userStatsRepository.findByUsername(username)
-                .map(stats -> ResponseEntity.ok(ApiResponse.ok("Stats retrieved", stats, traceId)))
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(ApiResponse.ok("My stats retrieved", stats, getTraceId()));
     }
 
     /**
-     * LEADERBOARD: Fetch top 10 developers.
+     * PUBLIC VIEW: Anyone can view a profile by username.
      */
+    @GetMapping("/{username}")
+    public ResponseEntity<ApiResponse<UserStats>> getPublicStats(@PathVariable String username) {
+        UserStats stats = userStatsRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Profile stats not found for: " + username));
+
+        return ResponseEntity.ok(ApiResponse.ok("Profile stats retrieved", stats, getTraceId()));
+    }
+
     @GetMapping("/leaderboard")
     public ResponseEntity<ApiResponse<List<UserStats>>> getLeaderboard() {
-        String traceId = UUID.randomUUID().toString();
         List<UserStats> topUsers = userStatsRepository.findTop10ByOrderByNexusScoreDesc();
+        return ResponseEntity.ok(ApiResponse.ok("Leaderboard fetched", topUsers, getTraceId()));
+    }
 
-        return ResponseEntity.ok(ApiResponse.ok("Leaderboard retrieved", topUsers, traceId));
+    private String getTraceId() {
+        return (tracer.currentSpan() != null) ? tracer.currentSpan().context().traceId() : "N/A";
     }
 }

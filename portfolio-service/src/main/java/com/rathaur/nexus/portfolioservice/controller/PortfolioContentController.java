@@ -5,6 +5,7 @@ import com.rathaur.nexus.portfolioservice.entity.*;
 import com.rathaur.nexus.portfolioservice.service.ProfileService;
 import io.micrometer.observation.annotation.Observed;
 import io.micrometer.tracing.Tracer;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -32,7 +33,10 @@ public class PortfolioContentController {
 
     @PostMapping("/projects")
     @PreAuthorize("hasAnyRole('USER', 'PRO', 'ADMIN')")
-    public ResponseEntity<ApiResponse<Project>> addProject(Authentication auth, @RequestBody Project project) {
+    public ResponseEntity<ApiResponse<Project>> addProject(
+            Authentication auth,
+            @RequestBody @Valid Project project) { // Added @Valid
+
         Project saved = profileService.addProject(auth.getName(), project);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Project added successfully", saved, getTraceId()));
