@@ -1,31 +1,29 @@
 package com.rathaur.nexus.statsservice.service;
 
-import com.rathaur.nexus.statsservice.entity.*;
-import com.rathaur.nexus.statsservice.exception.StatsDomainExceptions.DataParsingException;
-import com.rathaur.nexus.statsservice.exception.StatsDomainExceptions.SyncServiceException;
-import com.rathaur.nexus.statsservice.repository.*;
-import io.micrometer.observation.annotation.Observed;
-import jakarta.persistence.EntityNotFoundException;
+import com.rathaur.nexus.statsservice.entity.GitHubStats;
+import com.rathaur.nexus.statsservice.entity.LeetCodeStats;
+import com.rathaur.nexus.statsservice.entity.UserStats;
+import com.rathaur.nexus.statsservice.repository.GitHubStatsRepository;
+import com.rathaur.nexus.statsservice.repository.LeetCodeStatsRepository;
+import com.rathaur.nexus.statsservice.repository.UserStatsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
- * Persistence service for Nexus Platform Stats.
- * Handles defensive data parsing, score recalculation, and semantic logging.
- * * @author Tanuj Singh Rathaur
+ * @author Tanuj Singh Rathaur
+ * @date 1/24/2026
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Observed(name = "stats.persistence.service")
 public class StatsPersistenceService {
 
     private final UserStatsRepository userStatsRepo;
@@ -34,148 +32,136 @@ public class StatsPersistenceService {
 
     @Transactional
     public void ensureMasterExists(String username) {
-        log.debug("Checking master record existence for user: {}", username);
         userStatsRepo.findById(username)
-                .orElseGet(() -> {
-                    log.info("Creating new UserStats master record for: {}", username);
-                    return userStatsRepo.save(UserStats.builder()
-                            .username(username)
-                            .nexusScore(0.0)
-                            .build());
-                });
+                .orElseGet(() -> userStatsRepo.save(
+                        UserStats.builder().username(username).nexusScore(0.0).build()
+                ));
     }
 
     @Transactional
     public void saveGithubAndRecalc(String username, Map<String, Object> data) {
-        log.info("Persisting GitHub telemetry for user: {}", username);
+        UserStats master = userStatsRepo.findById(username).orElseThrow();
+        GitHubStats stats = gitHubStatsRepo.findById(username).orElseGet(() -> {
+            GitHubStats s = new GitHubStats();
+            s.setUserStats(master);
+            return s;
+        });
 
-        UserStats master = userStatsRepo.findById(username)
-                .orElseThrow(() -> new EntityNotFoundException("Master record missing for: " + username));
+        Map<String, Object> user = (Map<String, Object>) data.get("user");
+        if (user == null) return;
 
         try {
-            GitHubStats stats = gitHubStatsRepo.findById(username).orElse(new GitHubStats());
-            stats.setUserStats(master);
+            // 1. Extract TOTAL COUNT from the alias
+            Map<String, Object> allRepos = (Map<String, Object>) user.getOrDefault("allRepos", Collections.emptyMap());
+            int totalReposCount = extractInt(allRepos, "totalCount");
 
-            // --- Defensive Path Walking ---
-            Map<String, Object> user = navigateMap(data, "user");
-            Map<String, Object> repos = navigateMap(user, "repositories");
-            List<Map<String, Object>> nodes = (List<Map<String, Object>>) repos.get("nodes");
-            Map<String, Object> contributions = navigateMap(user, "contributionsCollection");
-            Map<String, Object> calendar = navigateMap(contributions, "contributionCalendar");
+            // 2. Extract NODES from the other alias
+            Map<String, Object> recentRepos = (Map<String, Object>) user.getOrDefault("recentRepos", Collections.emptyMap());
+            List<Map<String, Object>> repoNodes = (List<Map<String, Object>>) recentRepos.getOrDefault("nodes", Collections.emptyList());
 
-            // Ensure you are navigating into the "user" -> "repositories" -> "nodes" correctly
-            int stars = (nodes == null) ? 0 : nodes.stream()
+            Map<String, Object> collection = (Map<String, Object>) user.getOrDefault("contributionsCollection", Collections.emptyMap());
+            Map<String, Object> calendar = (Map<String, Object>) collection.getOrDefault("contributionCalendar", Collections.emptyMap());
+
+            // 3. Calculate stars
+            int stars = repoNodes.stream()
                     .filter(Objects::nonNull)
                     .mapToInt(n -> {
-                        Object count = n.get("stargazerCount");
-                        // Log this to see what GitHub is actually returning
-                        log.debug("User: {} | Repo Star Count: {}", username, count);
-                        return extractInt(count);
-                    })
-                    .sum();
+                        Object s = n.get("stargazerCount");
+                        return (s instanceof Number num) ? num.intValue() : 0;
+                    }).sum();
 
-            stats.setPublicRepos(extractInt(repos.get("totalCount")));
+            // 4. Set Values - totalReposCount will now be 16
+            stats.setPublicRepos(totalReposCount);
             stats.setTotalStars(stars);
-            stats.setTotalCommitsYearly(extractInt(calendar.get("totalContributions")));
+            stats.setTotalCommitsYearly(extractInt(calendar, "totalContributions"));
+
             stats.setTelemetry(data);
             stats.setLastSynced(Instant.now());
 
             gitHubStatsRepo.saveAndFlush(stats);
-            log.debug("GitHub stats saved. Recalculating Nexus Score for {}", username);
-
             recalc(master);
 
         } catch (Exception e) {
-            log.error("CRITICAL: Failed to parse/save GitHub data for user {}. Error: {}", username, e.getMessage());
-            throw new DataParsingException("Error extracting GitHub telemetry fields");
+            log.error("NEXUS-PERSIST: Mapping failed", e);
         }
+    }
+    private int extractInt(Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        return (val instanceof Number n) ? n.intValue() : 0;
     }
 
     @Transactional
     public void saveLeetCodeAndRecalc(String username, Map<String, Object> data) {
-        log.info("Persisting LeetCode telemetry for user: {}", username);
+        UserStats master = userStatsRepo.findById(username).orElseThrow();
 
-        UserStats master = userStatsRepo.findById(username)
-                .orElseThrow(() -> new EntityNotFoundException("Master record missing for: " + username));
+        LeetCodeStats stats = leetCodeStatsRepo.findById(username).orElse(null);
 
-        try {
-            LeetCodeStats stats = leetCodeStatsRepo.findById(username).orElse(new LeetCodeStats());
+        if (stats == null) {
+            stats = new LeetCodeStats();
             stats.setUserStats(master);
-
-            Map<String, Object> matchedUser = navigateMap(data, "matchedUser");
-            Map<String, Object> profile = navigateMap(matchedUser, "profile");
-            Map<String, Object> submitStats = navigateMap(matchedUser, "submitStats");
-            List<Map<String, Object>> submissionStats = (List<Map<String, Object>>) submitStats.get("acSubmissionNum");
-
-            // --- NEXUS FIX: Graceful handling of empty stats ---
-            if (submissionStats == null || submissionStats.isEmpty()) {
-                log.warn("NEXUS-STATS: LeetCode stats empty for {}. Defaulting to zeros.", username);
-                stats.setTotalSolved(0);
-                stats.setEasySolved(0);
-                stats.setMediumSolved(0);
-                stats.setHardSolved(0);
-            } else {
-                stats.setTotalSolved(extractInt(submissionStats.get(0).get("count")));
-                stats.setEasySolved(extractInt(submissionStats.get(1).get("count")));
-                stats.setMediumSolved(extractInt(submissionStats.get(2).get("count")));
-                stats.setHardSolved(extractInt(submissionStats.get(3).get("count")));
-            }
-
-            stats.setGlobalRanking(extractInt(profile.get("ranking")));
-            stats.setAdvancedMetrics(data);
-            stats.setLastSynced(Instant.now());
-
-            leetCodeStatsRepo.saveAndFlush(stats);
-            recalc(master);
-
-        } catch (Exception e) {
-            // Log the error but don't necessarily crash the whole sync if it's just a parsing glitch
-            log.error("NEXUS-STATS: Non-fatal error parsing LeetCode for {}: {}", username, e.getMessage());
-            // Optionally: throw a custom NON-ROLLBACK exception if you want to notify the caller
+        } else {
+            stats.setUserStats(master);
         }
+
+        // 1. Path Walking
+        Map<String, Object> matchedUser = (Map<String, Object>) data.get("matchedUser");
+        Map<String, Object> profile = (Map<String, Object>) matchedUser.get("profile");
+        List<Map<String, Object>> submissionStats = (List<Map<String, Object>>)
+                ((Map<String, Object>) matchedUser.get("submitStats")).get("acSubmissionNum");
+
+        // 2. Map all difficulty levels (0=All, 1=Easy, 2=Medium, 3=Hard)
+        stats.setGlobalRanking(((Number) profile.get("ranking")).intValue());
+
+        // Using defensive checks in case the list order ever changes
+        stats.setTotalSolved(((Number) submissionStats.get(0).get("count")).intValue());
+        stats.setEasySolved(((Number) submissionStats.get(1).get("count")).intValue());
+        stats.setMediumSolved(((Number) submissionStats.get(2).get("count")).intValue());
+        stats.setHardSolved(((Number) submissionStats.get(3).get("count")).intValue());
+
+        stats.setAdvancedMetrics(data);
+        stats.setLastSynced(Instant.now());
+
+        log.info("Saving LeetCode stats for: {}", username);
+        leetCodeStatsRepo.saveAndFlush(stats);
+
+        recalc(master);
     }
 
     private void recalc(UserStats master) {
-        String username = master.getUsername();
-        GitHubStats gh = gitHubStatsRepo.findById(username).orElse(null);
-        LeetCodeStats lc = leetCodeStatsRepo.findById(username).orElse(null);
+        GitHubStats gh = master.getGithubStats();
+        LeetCodeStats lc = master.getLeetCodeStats();
 
-        double oldScore = master.getNexusScore();
         double score = 0;
-
         if (gh != null) {
-            score += (gh.getTotalStars() * 10) + (gh.getPublicRepos() * 2);
+            score += (gh.getPublicRepos() * 25);
+            score += (gh.getTotalStars() * 10);
+            score += (gh.getTotalCommitsYearly() * 5);
         }
+
         if (lc != null) {
-            score += (Optional.ofNullable(lc.getTotalSolved()).orElse(0) * 5)
-                    + (Optional.ofNullable(lc.getHardSolved()).orElse(0) * 20);
+            score += (lc.getEasySolved() != null ? lc.getEasySolved() * 2 : 0);
+            score += (lc.getMediumSolved() != null ? lc.getMediumSolved() * 15 : 0);
+            score += (lc.getHardSolved() != null ? lc.getHardSolved() * 50 : 0);
         }
 
         master.setNexusScore(score);
-        master.setLastSyncAll(Instant.now());
+
+        // --- FIX: Wrap the String in a Map to match the Entity's required type ---
+        if (gh != null) {
+            String bioMessage = String.format(
+                    "Fullstack developer with %d projects and %d commits this week. LeetCode: %d solved.",
+                    gh.getPublicRepos(),
+                    gh.getTotalCommitsYearly(),
+                    (lc != null ? lc.getTotalSolved() : 0)
+            );
+
+            // Setting it as a Map so Hibernate can persist it as JSON
+            master.setQuickSummary(Map.of(
+                    "headline", bioMessage,
+                    "lastUpdated", Instant.now().toString()
+            ));
+        }
+
         userStatsRepo.save(master);
-
-        log.info("SCORE_UPDATE: User={} | Old={} | New={} | Delta={}",
-                username, oldScore, score, (score - oldScore));
-    }
-
-    // --- Helper Utilities ---
-
-    private Map<String, Object> navigateMap(Object obj, String fieldName) {
-        if (obj instanceof Map) {
-            Object target = ((Map<?, ?>) obj).get(fieldName);
-            if (target instanceof Map) {
-                return (Map<String, Object>) target;
-            }
-        }
-        log.warn("NEXUS-STATS: Navigation failed for field: {}. Returning empty map.", fieldName);
-        return Map.of(); // Return empty map instead of throwing exception
-    }
-
-    private int extractInt(Object obj) {
-        if (obj instanceof Number) {
-            return ((Number) obj).intValue();
-        }
-        return 0;
     }
 }

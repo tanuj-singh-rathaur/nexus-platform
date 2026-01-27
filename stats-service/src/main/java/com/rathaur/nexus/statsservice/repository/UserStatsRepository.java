@@ -1,7 +1,9 @@
 package com.rathaur.nexus.statsservice.repository;
 
 import com.rathaur.nexus.statsservice.entity.UserStats;
+import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
@@ -17,6 +19,21 @@ public interface UserStatsRepository extends JpaRepository<UserStats, String> {
 
     // Fast Leaderboard: Top 10 users by Nexus Score
     List<UserStats> findTop10ByOrderByNexusScoreDesc();
+
+    @Modifying
+    @Transactional
+    @Query(value = """
+        WITH RankedStats AS (
+            SELECT username, 
+                   RANK() OVER (ORDER BY nexus_score DESC) as calculated_rank
+            FROM user_stats
+        )
+        UPDATE user_stats
+        SET global_rank = RankedStats.calculated_rank
+        FROM RankedStats
+        WHERE user_stats.username = RankedStats.username
+        """, nativeQuery = true)
+    void updateGlobalRanks();
 
     /**
      * ADVANCED JSONB QUERY:

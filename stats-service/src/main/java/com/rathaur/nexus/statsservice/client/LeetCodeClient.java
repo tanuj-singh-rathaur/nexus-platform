@@ -11,9 +11,7 @@ import reactor.core.publisher.Mono;
 import java.util.Map;
 
 /**
- * LeetCode GraphQL Client.
- * Optimized for public profile scraping with rate-limit detection.
- * * @author Tanuj Singh Rathaur
+ * LeetCode Synchronous Client.
  */
 @Slf4j
 @Component
@@ -25,11 +23,11 @@ public class LeetCodeClient {
         this.webClient = builder
                 .baseUrl("https://leetcode.com")
                 .defaultHeader("Content-Type", "application/json")
-                .defaultHeader("Referer", "https://leetcode.com") // Often required by LeetCode
+                .defaultHeader("Referer", "https://leetcode.com")
                 .build();
     }
 
-    public Mono<Map<String, Object>> fetchUserStats(String leetcodeUsername) {
+    public Map<String, Object> fetchUserStats(String leetcodeUsername) {
         String query = """
             query getUserProfile($username: String!) {
               matchedUser(username: $username) {
@@ -46,33 +44,39 @@ public class LeetCodeClient {
             }
             """;
 
-        return webClient.post()
-                .uri("/graphql")
-                .bodyValue(Map.of(
-                        "query", query,
-                        "variables", Map.of("username", leetcodeUsername)
-                ))
-                .retrieve()
-                // --- 1. DETECT LEETCODE THROTTLING (429) ---
-                .onStatus(status -> status.value() == 429, response ->
-                        Mono.error(new StatsDomainExceptions.ExternalProviderThrottledException(
-                                "LeetCode rate limit hit for user: " + leetcodeUsername)))
+        log.info("LEETCODE-CLIENT: [SYNC] Preparing query for {}", leetcodeUsername);
 
-                // --- 2. DETECT API ERRORS (4xx / 5xx) ---
-                .onStatus(HttpStatusCode::isError, response ->
-                        Mono.error(new StatsDomainExceptions.SyncServiceException("LeetCode API unreachable or user not found")))
+        try {
+            // Using .block() to make the reactive call synchronous for debugging
+            Map<String, Object> response = webClient.post()
+                    .uri("/graphql")
+                    .bodyValue(Map.of(
+                            "query", query,
+                            "variables", Map.of("username", leetcodeUsername)
+                    ))
+                    .retrieve()
+                    .onStatus(status -> status.value() == 429, res ->
+                            res.createException().flatMap(e -> Mono.error(new StatsDomainExceptions.ExternalProviderThrottledException("Throttled"))))
+                    .onStatus(HttpStatusCode::isError, res ->
+                            res.createException().flatMap(e -> Mono.error(new StatsDomainExceptions.SyncServiceException("API Error"))))
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                    .block(); // <--- BLOCKING HERE
 
-                // --- 3. TYPE-SAFE DESERIALIZATION ---
-                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
-                .map(response -> {
-                    Map<String, Object> data = (Map<String, Object>) response.get("data");
+            if (response == null || response.get("data") == null) {
+                throw new StatsDomainExceptions.DataParsingException("LeetCode returned empty data");
+            }
 
-                    // LeetCode returns null 'matchedUser' if the username doesn't exist
-                    if (data == null || data.get("matchedUser") == null) {
-                        log.warn("LEETCODE-CLIENT: No data found for username: {}", leetcodeUsername);
-                        throw new StatsDomainExceptions.DataParsingException("LeetCode user not found: " + leetcodeUsername);
-                    }
-                    return data;
-                });
+            Map<String, Object> data = (Map<String, Object>) response.get("data");
+            if (data.get("matchedUser") == null) {
+                throw new StatsDomainExceptions.DataParsingException("LeetCode user not found: " + leetcodeUsername);
+            }
+
+            log.info("LEETCODE-CLIENT: Data fetched successfully for {}", leetcodeUsername);
+            return data;
+
+        } catch (Exception e) {
+            log.error("LEETCODE-CLIENT: Error during fetch: {}", e.getMessage(), e);
+            throw e;
+        }
     }
 }
